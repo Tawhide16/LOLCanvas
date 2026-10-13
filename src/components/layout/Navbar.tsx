@@ -20,11 +20,23 @@ export default function Navbar() {
     setMounted(true);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email ?? null);
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      } else if (typeof window !== "undefined") {
+        try {
+          const local = localStorage.getItem("lolcanvas_user");
+          if (local) {
+            const parsed = JSON.parse(local);
+            setUserEmail(parsed.email || null);
+          }
+        } catch (e) {}
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      }
     });
 
     return () => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { User as UserIcon, LogOut, Heart, Wand2, ShieldCheck, Database, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { User as UserIcon, LogOut, Heart, Wand2, ShieldCheck, Database, AlertCircle, CheckCircle2, ArrowRight, Crown } from "lucide-react";
 import { TEMPLATES } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -18,12 +18,27 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
 
-  // 1. Listen for Supabase Auth state changes
+  // 1. Listen for Supabase Auth state changes & local storage user
   useEffect(() => {
     async function getSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setCurrentUser(session?.user ?? null);
+        if (session?.user) {
+          setCurrentUser(session.user);
+        } else {
+          // Check local DB user session
+          const local = localStorage.getItem("lolcanvas_user");
+          if (local) {
+            const userObj = JSON.parse(local);
+            setCurrentUser({
+              id: userObj.id,
+              email: userObj.email,
+              app_metadata: { provider: "DATABASE", role: userObj.role },
+              user_metadata: { name: userObj.name, role: userObj.role },
+              created_at: userObj.createdAt || new Date().toISOString(),
+            } as any);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch session:", err);
       } finally {
@@ -35,7 +50,9 @@ export default function LoginPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setCurrentUser(session?.user ?? null);
+        if (session?.user) {
+          setCurrentUser(session.user);
+        }
       }
     );
 
@@ -69,6 +86,46 @@ export default function LoginPage() {
           );
         }
       } else {
+        // Mode: LOGIN
+        // 1. Check Neon DB credentials via /api/auth/login first
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (res.ok) {
+            const resData = await res.json();
+            const userObj = resData.data.user;
+            localStorage.setItem("lolcanvas_user", JSON.stringify(userObj));
+            setCurrentUser({
+              id: userObj.id,
+              email: userObj.email,
+              app_metadata: { provider: "DATABASE", role: userObj.role },
+              user_metadata: { name: userObj.name, role: userObj.role },
+              created_at: userObj.createdAt || new Date().toISOString(),
+            } as any);
+
+            if (userObj.role === "SUPER_ADMIN" || userObj.email === "admin123@gmail.com") {
+              setAuthSuccess("👑 SUPER ADMIN VERIFIED! REDIRECTING TO COMMAND CENTER...");
+              setTimeout(() => {
+                window.location.href = "/admin";
+              }, 700);
+              return;
+            }
+
+            setAuthSuccess("Signed in successfully!");
+            setTimeout(() => {
+              window.location.reload();
+            }, 600);
+            return;
+          }
+        } catch (apiErr) {
+          console.warn("Direct DB auth failed, attempting Supabase fallback...", apiErr);
+        }
+
+        // 2. Fallback to Supabase login
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -111,12 +168,15 @@ export default function LoginPage() {
     }
   };
 
-  // 3. Handle Logout
+  // 4. Handle Logout
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem("lolcanvas_user");
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setCurrentUser(null);
     setAuthSuccess(null);
     setAuthError(null);
+    window.location.reload();
   };
 
   const demoFavorites = TEMPLATES.slice(0, 3);
@@ -179,6 +239,31 @@ export default function LoginPage() {
               SIGN OUT
             </button>
           </div>
+
+          {/* Super Admin Privileges Banner */}
+          {(currentUser.email === "admin123@gmail.com" || (currentUser as any).app_metadata?.role === "SUPER_ADMIN") && (
+            <div className="p-4 bg-[#FFE4E6] border border-[#E11D48] shadow-[4px_4px_0px_0px_rgba(225,29,72,1)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono-code text-xs">
+              <div className="flex items-center gap-3">
+                <Crown className="w-6 h-6 text-[#E11D48] shrink-0" />
+                <div>
+                  <div className="font-display font-black text-sm uppercase text-black">
+                    SUPER ADMIN ACCESS ACTIVE
+                  </div>
+                  <div className="text-[10px] text-[#555555]">
+                    Full platform monitoring, user management, meme moderation, and audit logs.
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/admin"
+                className="px-4 py-2 bg-[#E11D48] text-white hover:bg-black font-bold uppercase transition-colors shrink-0 text-center flex items-center justify-center gap-1.5 border border-black"
+              >
+                <span>OPEN COMMAND CENTER</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
 
           {/* User Meta Information */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono-code text-xs">
@@ -324,6 +409,23 @@ export default function LoginPage() {
                   className="w-full p-2.5 bg-[#FAF9F5] border border-black text-xs font-bold focus:outline-none"
                 />
               </div>
+
+              {/* Super Admin Quick Autofill Option */}
+              {mode === "login" && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail("admin123@gmail.com");
+                      setPassword("admin123");
+                    }}
+                    className="w-full py-1.5 px-2 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors font-mono-code text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] active:translate-y-[1px]"
+                  >
+                    <Crown className="w-3.5 h-3.5 shrink-0" />
+                    <span>FILL SUPER ADMIN (admin123@gmail.com)</span>
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"

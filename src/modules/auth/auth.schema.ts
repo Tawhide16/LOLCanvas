@@ -16,7 +16,7 @@ export const registerSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name cannot exceed 50 characters")
     .optional(),
-  role: z.enum(["CREATOR", "CURATOR", "ADMIN"]).default("CREATOR"),
+  role: z.enum(["CREATOR", "CURATOR", "ADMIN", "SUPER_ADMIN"]).default("CREATOR"),
 });
 
 export const loginSchema = z.object({
