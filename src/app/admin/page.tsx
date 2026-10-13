@@ -749,9 +749,9 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {memes.slice(0, 4).map((m) => (
                     <div key={m.id} className="p-3 border border-black bg-[#FAF9F5] space-y-2">
-                      <div className="aspect-square bg-white border border-black/10 flex items-center justify-center overflow-hidden">
+                      <div className="bg-white border border-black/10 flex items-center justify-center p-2 min-h-[160px]">
                         {m.previewUrl ? (
-                          <img src={m.previewUrl} alt={m.title} className="w-full h-full object-contain" />
+                          <img src={m.previewUrl} alt={m.title} className="w-auto h-auto max-w-full max-h-[150px] object-contain" />
                         ) : (
                           <span className="font-mono-code text-[10px] text-[#777777]">CANVAS SVG</span>
                         )}
@@ -1002,9 +1002,9 @@ export default function AdminPage() {
                     key={m.id}
                     className="bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                   >
-                    <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/20 p-2 flex items-center justify-center overflow-hidden">
+                    <div className="bg-[#FAF9F5] border border-black/20 p-2 flex items-center justify-center min-h-[220px]">
                       {m.previewUrl ? (
-                        <img src={m.previewUrl} alt={m.title} className="max-h-full max-w-full object-contain" />
+                        <img src={m.previewUrl} alt={m.title} className="w-auto h-auto max-w-full max-h-[210px] object-contain" />
                       ) : (
                         <div className="font-mono-code text-xs text-[#777777] text-center">
                           NO PREVIEW IMAGE
@@ -1271,16 +1271,16 @@ export default function AdminPage() {
                         </span>
                       </div>
 
-                      {/* Card Preview Image */}
+                      {/* Card Preview Image - Full uncropped meme */}
                       <div
                         onClick={() => handleToggleSelectTemplate(cardKey)}
-                        className="p-4 bg-white flex items-center justify-center aspect-[4/3] cursor-pointer overflow-hidden"
+                        className="p-3 bg-white flex items-center justify-center cursor-pointer min-h-[220px]"
                       >
                         {t.svgDataUri ? (
                           <img
                             src={t.svgDataUri}
                             alt={t.title}
-                            className="max-h-full max-w-full object-contain border border-black/10"
+                            className="w-auto h-auto max-w-full max-h-[210px] object-contain border border-black/10"
                           />
                         ) : (
                           <div className="font-mono-code text-xs text-[#777777]">NO PREVIEW</div>

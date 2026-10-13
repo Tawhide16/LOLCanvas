@@ -63,13 +63,13 @@ export default function MemeCard({ template, onPreview, isAdmin, onDelete }: Mem
         </span>
       </div>
 
-      {/* Visual Preview */}
-      <div className="p-4 sm:p-6 flex items-center justify-center bg-white group-hover:bg-[#F6F5EE] transition-colors relative min-h-[200px]">
-        <div className="w-full aspect-[4/3] relative flex items-center justify-center">
+      {/* Visual Preview - Full uncropped meme */}
+      <div className="p-3 sm:p-4 flex items-center justify-center bg-white group-hover:bg-[#F6F5EE] transition-colors relative min-h-[240px] sm:min-h-[270px]">
+        <div className="w-full flex items-center justify-center">
           <img
             src={template.svgDataUri}
             alt={template.title}
-            className="max-h-full max-w-full object-contain border border-black/15 group-hover:border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] group-hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+            className="w-auto h-auto max-w-full max-h-[250px] sm:max-h-[270px] object-contain border border-black/15 group-hover:border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] group-hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
           />
         </div>
 
