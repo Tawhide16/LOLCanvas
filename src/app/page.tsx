@@ -6,7 +6,7 @@ import SubmissionCallout from "@/components/home/SubmissionCallout";
 
 export default function Home() {
   return (
-    <div className="flex flex-col w-full">
+    <div suppressHydrationWarning className="flex flex-col w-full">
       {/* 4.3 Split Hero */}
       <HeroBanner />
 

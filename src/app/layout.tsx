@@ -49,12 +49,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${spaceMono.variable} ${inter.variable}`}
     >
-      <body className="min-h-screen bg-[#E6E4DC] text-black font-body selection:bg-black selection:text-white antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-[#E6E4DC] text-black font-body selection:bg-black selection:text-white antialiased"
+      >
         {/* Outer Frame with desktop insets: p-2 sm:p-5 md:p-8 */}
-        <div className="min-h-screen p-2 sm:p-5 md:p-8 flex flex-col justify-between">
-          <div className="w-full max-w-[1540px] mx-auto flex flex-col flex-1 bg-[#FAF9F5] border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div suppressHydrationWarning className="min-h-screen p-2 sm:p-5 md:p-8 flex flex-col justify-between">
+          <div suppressHydrationWarning className="w-full max-w-[1540px] mx-auto flex flex-col flex-1 bg-[#FAF9F5] border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             {/* Top Outer Metadata Row */}
             <OuterMetadata position="top" />
 
