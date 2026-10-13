@@ -58,11 +58,6 @@ export async function getTemplates(query: TemplateQueryInput) {
     createdAt: t.createdAt.toISOString(),
   }));
 
-  // Fallback to TEMPLATES only if Neon DB is completely empty (never seeded)
-  if (results.length === 0) {
-    results = [...TEMPLATES];
-  }
-
   if (query.category && query.category !== "all") {
     results = results.filter(
       (t) =>

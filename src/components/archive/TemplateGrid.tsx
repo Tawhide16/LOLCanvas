@@ -24,8 +24,9 @@ export default function TemplateGrid({
   const [activePreviewTemplate, setActivePreviewTemplate] = useState<Template | null>(null);
 
   // Dynamic template archive state
-  const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
   // Delete card popup modal state
   const [cardToDelete, setCardToDelete] = useState<Template | null>(null);
@@ -66,21 +67,29 @@ export default function TemplateGrid({
 
     // 2. Fetch live templates from DB
     async function loadTemplates() {
+      setIsLoadingTemplates(true);
       try {
         const res = await fetch("/api/templates");
         if (res.ok) {
           const data = await res.json();
-          if (data.data?.templates && data.data.templates.length > 0) {
+          if (Array.isArray(data.data?.templates)) {
             // Filter out any locally deleted template IDs
             const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
             const filtered = data.data.templates.filter(
               (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
             );
             setTemplates(filtered);
+          } else {
+            setTemplates([]);
           }
+        } else {
+          setTemplates([]);
         }
       } catch (err) {
-        console.warn("Could not load dynamic templates, using built-in catalog:", err);
+        console.warn("Could not load dynamic templates:", err);
+        setTemplates([]);
+      } finally {
+        setIsLoadingTemplates(false);
       }
     }
 
@@ -348,7 +357,14 @@ export default function TemplateGrid({
       />
 
       {/* Connected Grid (4 cols desktop, 2 cols tablet, 1 col mobile) */}
-      {filteredTemplates.length > 0 ? (
+      {isLoadingTemplates ? (
+        <div className="p-16 text-center border-b border-black font-mono-code space-y-3 bg-white">
+          <div className="w-6 h-6 border-2 border-black border-t-[#E11D48] rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-bold uppercase text-black">
+            LOADING TEMPLATE ARCHIVE...
+          </p>
+        </div>
+      ) : filteredTemplates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-l border-t border-black bg-[#FAF9F5]">
           {filteredTemplates.map((template) => (
             <MemeCard
@@ -361,23 +377,29 @@ export default function TemplateGrid({
           ))}
         </div>
       ) : (
-        <div className="p-16 text-center border-b border-black font-mono-code space-y-4">
+        <div className="p-16 text-center border-b border-black font-mono-code space-y-4 bg-white">
           <div className="text-4xl">∅</div>
           <p className="text-base font-bold uppercase text-black">
-            NO ARCHIVE ENTRIES MATCH YOUR CURRENT CRITERIA
+            {templates.length === 0
+              ? "NO TEMPLATE CARDS FOUND IN ARCHIVE"
+              : "NO ARCHIVE ENTRIES MATCH YOUR CURRENT CRITERIA"}
           </p>
-          <p className="text-xs text-[#666666]">
-            Try resetting your filters or search keywords.
+          <p className="text-xs text-[#666666] max-w-md mx-auto">
+            {templates.length === 0
+              ? "All template cards have been removed. Use the Super Admin panel to upload new template cards to the website."
+              : "Try resetting your filters or search keywords."}
           </p>
-          <button
-            onClick={() => {
-              setSelectedCategory("all");
-              setFormat("all");
-            }}
-            className="px-4 py-2 bg-black text-white text-xs uppercase font-bold"
-          >
-            RESET ALL FILTERS
-          </button>
+          {templates.length > 0 && (
+            <button
+              onClick={() => {
+                setSelectedCategory("all");
+                setFormat("all");
+              }}
+              className="px-4 py-2 bg-black text-white text-xs uppercase font-bold"
+            >
+              RESET ALL FILTERS
+            </button>
+          )}
         </div>
       )}
 

@@ -1,17 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TEMPLATES } from "@/lib/data";
 
 export default function TrendingSection() {
+  const [trendingTemplates, setTrendingTemplates] = useState<any[]>([]);
   const [scrollIndex, setScrollIndex] = useState(0);
   const [direction, setDirection] = useState(1);
-  const trendingTemplates = TEMPLATES.filter((t) => t.trendingRank !== undefined).sort(
-    (a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)
-  );
+
+  useEffect(() => {
+    async function loadTrending() {
+      try {
+        const res = await fetch("/api/templates");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.data?.templates)) {
+            const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+            const filtered = data.data.templates.filter(
+              (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
+            );
+            setTrendingTemplates(filtered);
+          }
+        }
+      } catch (err) {}
+    }
+    loadTrending();
+  }, []);
+
+  if (trendingTemplates.length === 0) return null;
 
   const visibleCount = 4;
   const maxIndex = Math.max(0, trendingTemplates.length - visibleCount);
