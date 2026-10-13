@@ -3,15 +3,31 @@ import TrendingSection from "@/components/home/TrendingSection";
 import CollectionSection from "@/components/home/CollectionSection";
 import TemplateGrid from "@/components/archive/TemplateGrid";
 import SubmissionCallout from "@/components/home/SubmissionCallout";
+import { getTemplates } from "@/modules/templates/template.service";
 
-export default function Home() {
+export default async function Home() {
+  let initialTemplates: any[] = [];
+  try {
+    const res = await getTemplates({
+      category: "all",
+      search: "",
+      page: 1,
+      limit: 60,
+    });
+    if (res?.templates && Array.isArray(res.templates)) {
+      initialTemplates = res.templates;
+    }
+  } catch (err) {
+    console.warn("Could not pre-fetch templates for Home SSR:", err);
+  }
+
   return (
     <div suppressHydrationWarning className="flex flex-col w-full">
       {/* 4.3 Split Hero */}
       <HeroBanner />
 
       {/* 4.4 Trending Dispatch Strip */}
-      <TrendingSection />
+      <TrendingSection initialTemplates={initialTemplates} />
 
       {/* 4.4 Category Taxonomy 01-08 */}
       <CollectionSection />
@@ -30,7 +46,7 @@ export default function Home() {
           </span>
         </div>
 
-        <TemplateGrid initialCategory="all" />
+        <TemplateGrid initialCategory="all" initialTemplates={initialTemplates} />
       </section>
 
       {/* 4.6 Full-Width Black Submission Callout */}

@@ -96,16 +96,28 @@ export async function getTemplates(query: TemplateQueryInput) {
     limit: query.limit,
   };
 
+  // 3. Cache response in Redis/Memory for 120 seconds for instant sub-millisecond retrieval
+  try {
+    await redis.set(cacheKey, responseData, { ex: 120 });
+  } catch (err) {}
+
   return {
     ...responseData,
     source: "database",
   };
 }
 
+async function invalidateTemplateCache() {
+  try {
+    await redis.del("templates:cat_all:q_:p_1");
+  } catch (e) {}
+}
+
 export async function createTemplate(
   input: CreateTemplateInput & { authorEmail?: string; originalUrl?: string },
   user?: JWTPayload
 ) {
+  await invalidateTemplateCache();
   const slug = input.slug || input.title.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
   const creatorEmail = input.authorEmail || user?.email || "anonymous@lolcanvas.studio";
 
@@ -185,11 +197,13 @@ export async function updateTemplate(input: {
     },
   });
 
+  await invalidateTemplateCache();
   return updated;
 }
 
 export async function deleteTemplate(idOrSlug: string) {
   try {
+    await invalidateTemplateCache();
     const deleted = await prisma.template.deleteMany({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],

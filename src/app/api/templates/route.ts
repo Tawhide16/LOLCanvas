@@ -46,8 +46,12 @@ export async function GET(req: NextRequest) {
 
     // 2. Fetch from Redis Cache or Database
     const result = await getTemplates(validatedQuery);
-
-    return successResponse(result, "Templates retrieved successfully");
+    const response = successResponse(result, "Templates retrieved successfully");
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+    );
+    return response;
   } catch (err: unknown) {
     if (err && typeof err === "object" && "name" in err && err.name === "ZodError") {
       return zodErrorResponse(err as import("zod").ZodError);

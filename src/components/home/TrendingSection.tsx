@@ -5,12 +5,38 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function TrendingSection() {
-  const [trendingTemplates, setTrendingTemplates] = useState<any[]>([]);
+interface TrendingSectionProps {
+  initialTemplates?: any[];
+}
+
+export default function TrendingSection({ initialTemplates }: TrendingSectionProps) {
+  const [trendingTemplates, setTrendingTemplates] = useState<any[]>(() => {
+    if (initialTemplates && initialTemplates.length > 0) return initialTemplates;
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("lolcanvas_cached_templates");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
   const [scrollIndex, setScrollIndex] = useState(0);
   const [direction, setDirection] = useState(1);
 
   useEffect(() => {
+    // If SSR initialTemplates provided, filter removed templates and avoid duplicate network fetch
+    if (initialTemplates && initialTemplates.length > 0) {
+      const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+      const filtered = initialTemplates.filter(
+        (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
+      );
+      setTrendingTemplates(filtered);
+      return;
+    }
+
     async function loadTrending() {
       try {
         const res = await fetch("/api/templates");
@@ -27,7 +53,7 @@ export default function TrendingSection() {
       } catch (err) {}
     }
     loadTrending();
-  }, []);
+  }, [initialTemplates]);
 
   if (trendingTemplates.length === 0) return null;
 
@@ -111,6 +137,8 @@ export default function TrendingSection() {
                   <img
                     src={item.svgDataUri}
                     alt={item.title}
+                    loading="eager"
+                    decoding="async"
                     className="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>

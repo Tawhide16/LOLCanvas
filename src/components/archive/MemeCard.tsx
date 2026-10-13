@@ -22,7 +22,9 @@ export default function MemeCard({
 }: MemeCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(() => {
+    return typeof template?.svgDataUri === "string" && template.svgDataUri.startsWith("data:");
+  });
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -116,7 +118,7 @@ export default function MemeCard({
       {/* Visual Preview - Full bleed meme with Shimmer Skeleton while loading */}
       <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center">
         {!imageLoaded && (
-          <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-5">
+          <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
             <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
               MEME
             </div>
@@ -125,11 +127,10 @@ export default function MemeCard({
         <img
           src={template.svgDataUri}
           alt={template.title}
-          loading="lazy"
+          loading="eager"
+          decoding="async"
           onLoad={() => setImageLoaded(true)}
-          className={`w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 ${
-            imageLoaded ? "opacity-100" : "opacity-0"
-          }`}
+          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
         />
 
         {onPreview && (

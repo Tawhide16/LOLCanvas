@@ -13,22 +13,45 @@ import { supabase } from "@/lib/supabase";
 interface TemplateGridProps {
   initialCategory?: string;
   searchQuery?: string;
+  initialTemplates?: Template[];
 }
 
 export default function TemplateGrid({
   initialCategory = "all",
   searchQuery = "",
+  initialTemplates = [],
 }: TemplateGridProps) {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState("trending");
   const [format, setFormat] = useState("all");
   const [activePreviewTemplate, setActivePreviewTemplate] = useState<Template | null>(null);
 
-  // Dynamic template archive state
-  const [templates, setTemplates] = useState<Template[]>([]);
+  // Dynamic template archive state: Instant initial data from SSR prop or localStorage cache (0ms delay)
+  const [templates, setTemplates] = useState<Template[]>(() => {
+    if (initialTemplates && initialTemplates.length > 0) return initialTemplates;
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("lolcanvas_cached_templates");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(() => {
+    if (initialTemplates && initialTemplates.length > 0) return false;
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("lolcanvas_cached_templates");
+        if (cached && JSON.parse(cached).length > 0) return false;
+      } catch (e) {}
+    }
+    return true;
+  });
 
   // Delete card popup modal state
   const [cardToDelete, setCardToDelete] = useState<Template | null>(null);
@@ -87,9 +110,12 @@ export default function TemplateGrid({
       }
     });
 
-    // 2. Fetch live templates from DB
+    // 2. Fetch live templates from DB (stale-while-revalidate background sync)
     async function loadTemplates() {
-      setIsLoadingTemplates(true);
+      // Only trigger loading state if we have zero cached or initial templates
+      if (templates.length === 0) {
+        setIsLoadingTemplates(true);
+      }
       try {
         const res = await fetch("/api/templates");
         if (res.ok) {
@@ -101,6 +127,9 @@ export default function TemplateGrid({
               (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
             );
             setTemplates(filtered);
+            try {
+              localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(filtered));
+            } catch (e) {}
 
             // Auto-optimize heavy legacy images in the background so the site loads in milliseconds
             const heavyTemplates = filtered.filter(
@@ -194,9 +223,13 @@ export default function TemplateGrid({
         if (cardToDelete.slug) removedIds.push(cardToDelete.slug);
         localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
 
-        setTemplates((prev) =>
-          prev.filter((t) => t.id !== targetId && t.slug !== targetId && t.slug !== cardToDelete.slug)
-        );
+        setTemplates((prev) => {
+          const next = prev.filter((t) => t.id !== targetId && t.slug !== targetId && t.slug !== cardToDelete.slug);
+          try {
+            localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(next));
+          } catch (e) {}
+          return next;
+        });
         setCardToDelete(null);
       } else {
         const data = await res.json().catch(() => ({}));
@@ -264,7 +297,13 @@ export default function TemplateGrid({
           authorEmail: creatorEmail,
         };
 
-        setTemplates((prev) => [newCard, ...prev]);
+        setTemplates((prev) => {
+          const next = [newCard, ...prev];
+          try {
+            localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(next));
+          } catch (e) {}
+          return next;
+        });
         setShowUploadModal(false);
         setNewTitle("");
         setNewImagePreview(null);
@@ -310,8 +349,8 @@ export default function TemplateGrid({
       });
 
       if (res.ok) {
-        setTemplates((prev) =>
-          prev.map((t) => {
+        setTemplates((prev) => {
+          const next = prev.map((t) => {
             if (t.id === cardToEdit.id || t.slug === cardToEdit.slug) {
               return {
                 ...t,
@@ -323,8 +362,12 @@ export default function TemplateGrid({
               };
             }
             return t;
-          })
-        );
+          });
+          try {
+            localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(next));
+          } catch (e) {}
+          return next;
+        });
         setCardToEdit(null);
       } else {
         const data = await res.json().catch(() => ({}));
