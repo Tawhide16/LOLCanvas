@@ -1,6 +1,55 @@
 import { prisma } from "@/lib/prisma";
 import { Role } from "../auth/auth.rbac";
 
+function formatBytes(bytes: number, decimals = 2): string {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
+
+export interface DatabaseMetrics {
+  usedBytes: number;
+  usedPretty: string;
+  limitBytes: number;
+  limitPretty: string;
+  usagePercent: number;
+  remainingBytes: number;
+  remainingPretty: string;
+  tables: Array<{
+    tableName: string;
+    totalBytes: number;
+    prettySize: string;
+    rowCount: number;
+  }>;
+}
+
+export interface StorageMetrics {
+  usedBytes: number;
+  usedPretty: string;
+  limitBytes: number;
+  limitPretty: string;
+  usagePercent: number;
+  remainingBytes: number;
+  remainingPretty: string;
+  totalAssetsCount: number;
+  supabaseBucketName: string;
+  averageAssetSizePretty: string;
+  assetBreakdown: {
+    templateAssetsBytes: number;
+    templateAssetsPretty: string;
+    templateCount: number;
+    userUploadsBytes: number;
+    userUploadsPretty: string;
+    userUploadsCount: number;
+    supabaseBucketBytes: number;
+    supabaseBucketPretty: string;
+    supabaseBucketCount: number;
+  };
+}
+
 export interface SystemStats {
   users: {
     total: number;
@@ -26,22 +75,102 @@ export interface SystemStats {
     uptimeSeconds: number;
     timestamp: string;
   };
+  database: DatabaseMetrics;
+  storage: StorageMetrics;
 }
 
 /**
- * Get comprehensive monitoring & analytics stats
+ * Get comprehensive monitoring, analytics, database & storage stats
  */
 export async function getSystemStats(): Promise<SystemStats> {
-  const startTime = Date.now();
+  const startTime = performance.now();
   let dbConnected = true;
   let dbLatencyMs = 0;
 
   try {
     await prisma.$queryRaw`SELECT 1`;
-    dbLatencyMs = Date.now() - startTime;
+    dbLatencyMs = Math.round(performance.now() - startTime);
   } catch (err) {
     dbConnected = false;
   }
+
+  // 1. Neon PostgreSQL Database Size & Table Metrics
+  let dbSizeBytes = 0;
+  let tableSizes: Array<{ tableName: string; totalBytes: number; prettySize: string; rowCount: number }> = [];
+  try {
+    const dbSizeRes = await prisma.$queryRawUnsafe<Array<{ size_bytes: bigint }>>(`
+      SELECT pg_database_size(current_database()) as size_bytes
+    `);
+    dbSizeBytes = Number(dbSizeRes[0]?.size_bytes || 0);
+
+    const tableRes = await prisma.$queryRawUnsafe<Array<{ table_name: string; total_bytes: bigint; row_estimate: bigint }>>(`
+      SELECT
+        relname as table_name,
+        pg_total_relation_size(relid) as total_bytes,
+        n_live_tup as row_estimate
+      FROM pg_catalog.pg_stat_user_tables
+      ORDER BY pg_total_relation_size(relid) DESC
+    `);
+    tableSizes = tableRes.map((t) => ({
+      tableName: t.table_name,
+      totalBytes: Number(t.total_bytes),
+      prettySize: formatBytes(Number(t.total_bytes)),
+      rowCount: Math.max(0, Number(t.row_estimate)),
+    }));
+  } catch (err) {
+    console.warn("Could not query DB size metrics:", err);
+  }
+
+  // 2. Storage Metrics (Assets in DB & Supabase Storage)
+  let templateAssetsBytes = 0;
+  let templateCount = 0;
+  let userUploadsBytes = 0;
+  let userUploadsCount = 0;
+  let supabaseBucketBytes = 0;
+  let supabaseBucketCount = 0;
+
+  try {
+    const templateBytesRes = await prisma.$queryRawUnsafe<Array<{ total_bytes: bigint; count: bigint }>>(`
+      SELECT
+        COALESCE(SUM(LENGTH("svgDataUri") + LENGTH(COALESCE("defaultBottomText", ''))), 0) as total_bytes,
+        COUNT(*) as count
+      FROM templates
+    `);
+    templateAssetsBytes = Number(templateBytesRes[0]?.total_bytes || 0);
+    templateCount = Number(templateBytesRes[0]?.count || 0);
+
+    const memeBytesRes = await prisma.$queryRawUnsafe<Array<{ total_bytes: bigint; count: bigint }>>(`
+      SELECT
+        COALESCE(SUM(LENGTH(COALESCE("previewUrl", ''))), 0) as total_bytes,
+        COUNT(*) as count
+      FROM memes
+    `);
+    userUploadsBytes = Number(memeBytesRes[0]?.total_bytes || 0);
+    userUploadsCount = Number(memeBytesRes[0]?.count || 0);
+
+    // Supabase bucket storage
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: files } = await supabase.storage.from("memes").list("exports", { limit: 100 });
+      if (files && files.length > 0) {
+        supabaseBucketCount = files.length;
+        supabaseBucketBytes = files.reduce((acc: number, f: any) => acc + (f.metadata?.size || 0), 0);
+      }
+    } catch (sbErr) {}
+  } catch (err) {
+    console.warn("Could not query storage metrics:", err);
+  }
+
+  const dbLimitBytes = 500 * 1024 * 1024; // 500 MB (Neon Postgres Free Tier)
+  const dbRemainingBytes = Math.max(0, dbLimitBytes - dbSizeBytes);
+  const dbUsagePercent = Math.min(100, parseFloat(((dbSizeBytes / dbLimitBytes) * 100).toFixed(2)));
+
+  const totalStorageUsedBytes = templateAssetsBytes + userUploadsBytes + supabaseBucketBytes;
+  const storageLimitBytes = 1024 * 1024 * 1024; // 1 GB (Supabase Storage Free Tier)
+  const storageRemainingBytes = Math.max(0, storageLimitBytes - totalStorageUsedBytes);
+  const storageUsagePercent = Math.min(100, parseFloat(((totalStorageUsedBytes / storageLimitBytes) * 100).toFixed(2)));
+  const totalAssetsCount = templateCount + userUploadsCount + supabaseBucketCount;
+  const averageAssetSize = totalAssetsCount > 0 ? totalStorageUsedBytes / totalAssetsCount : 0;
 
   const [
     totalUsers,
@@ -98,6 +227,39 @@ export async function getSystemStats(): Promise<SystemStats> {
       dbLatencyMs,
       uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
+    },
+    database: {
+      usedBytes: dbSizeBytes,
+      usedPretty: formatBytes(dbSizeBytes),
+      limitBytes: dbLimitBytes,
+      limitPretty: formatBytes(dbLimitBytes),
+      usagePercent: dbUsagePercent,
+      remainingBytes: dbRemainingBytes,
+      remainingPretty: formatBytes(dbRemainingBytes),
+      tables: tableSizes,
+    },
+    storage: {
+      usedBytes: totalStorageUsedBytes,
+      usedPretty: formatBytes(totalStorageUsedBytes),
+      limitBytes: storageLimitBytes,
+      limitPretty: formatBytes(storageLimitBytes),
+      usagePercent: storageUsagePercent,
+      remainingBytes: storageRemainingBytes,
+      remainingPretty: formatBytes(storageRemainingBytes),
+      totalAssetsCount,
+      supabaseBucketName: "memes",
+      averageAssetSizePretty: formatBytes(averageAssetSize),
+      assetBreakdown: {
+        templateAssetsBytes,
+        templateAssetsPretty: formatBytes(templateAssetsBytes),
+        templateCount,
+        userUploadsBytes,
+        userUploadsPretty: formatBytes(userUploadsBytes),
+        userUploadsCount,
+        supabaseBucketBytes,
+        supabaseBucketPretty: formatBytes(supabaseBucketBytes),
+        supabaseBucketCount,
+      },
     },
   };
 }
