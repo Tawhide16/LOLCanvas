@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Menu, X, Plus, User, Palette } from "lucide-react";
+import { Search, Menu, X, Plus, User, Palette, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
@@ -126,6 +126,17 @@ export default function Navbar() {
           <span className="sm:hidden">+</span>
         </Link>
 
+        {/* Super Admin Portal Cell */}
+        <Link
+          href="/admin"
+          className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
+          title="Super Admin Control Center"
+        >
+          <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
+          <span className="hidden sm:inline">SUPER ADMIN</span>
+          <span className="sm:hidden">ADMIN</span>
+        </Link>
+
         {/* Login / User Status Cell */}
         <Link
           href="/login"
@@ -176,6 +187,17 @@ export default function Navbar() {
               <span className="text-[11px] text-[#888888]">→</span>
             </Link>
           ))}
+          <Link
+            href="/admin"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center justify-between px-5 py-3 bg-[#FFE4E6] text-[#E11D48] font-bold"
+          >
+            <span className="flex items-center gap-2">
+              <Crown className="w-4 h-4" />
+              <span>SUPER ADMIN PORTAL</span>
+            </span>
+            <span className="text-[11px]">→</span>
+          </Link>
         </motion.div>
       )}
     </nav>

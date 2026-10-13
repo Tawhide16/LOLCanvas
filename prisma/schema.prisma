@@ -20,7 +20,8 @@ model User {
   passwordHash  String?
   name          String?
   avatarUrl     String?
-  role          String       @default("CREATOR") // CREATOR, CURATOR, ADMIN
+  status        String       @default("ACTIVE") // ACTIVE, SUSPENDED, BANNED
+  role          String       @default("CREATOR") // CREATOR, CURATOR, ADMIN, SUPER_ADMIN
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -114,4 +115,23 @@ model CollectionItem {
 
   @@unique([collectionId, memeId])
   @@map("collection_items")
+}
+
+// -------------------------------------------------------------
+// SUPER ADMIN AUDIT LOGS & SYSTEM ACTIONS
+// -------------------------------------------------------------
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  action     String   // ROLE_CHANGE, USER_BAN, USER_DELETE, MEME_DELETE, TEMPLATE_CREATE
+  targetId   String?
+  targetType String?  // USER, MEME, TEMPLATE, SYSTEM
+  details    String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
