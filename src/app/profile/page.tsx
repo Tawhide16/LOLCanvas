@@ -42,6 +42,7 @@ export default function ProfilePage() {
   // Upload widget state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [uploadOriginal, setUploadOriginal] = useState<string | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("classic");
   const [isUploading, setIsUploading] = useState(false);
@@ -52,7 +53,6 @@ export default function ProfilePage() {
   const [editingMeme, setEditingMeme] = useState<UserMeme | null>(null);
   const [editMemeTitle, setEditMemeTitle] = useState("");
   const [isUpdatingMeme, setIsUpdatingMeme] = useState(false);
-
 
   // 1. Load Session
   useEffect(() => {
@@ -106,8 +106,8 @@ export default function ProfilePage() {
     }
   };
 
-  // 3. Handle File Selection for Upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 3. Handle File Selection for Upload with Automatic Web Optimization
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
 
@@ -118,11 +118,19 @@ export default function ProfilePage() {
     }
 
     setUploadFile(selected);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setUploadPreview(event.target?.result as string);
-    };
-    reader.readAsDataURL(selected);
+    try {
+      const { processImageForWeb } = await import("@/lib/imageOptimizer");
+      const result = await processImageForWeb(selected, 720, 0.85);
+      setUploadPreview(result.previewDataUri);
+      setUploadOriginal(result.originalDataUri);
+    } catch (err) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUploadPreview(event.target?.result as string);
+        setUploadOriginal(event.target?.result as string);
+      };
+      reader.readAsDataURL(selected);
+    }
   };
 
   // 4. Handle Direct Meme Upload
@@ -147,7 +155,7 @@ export default function ProfilePage() {
             {
               id: `bg-${Date.now()}`,
               type: "image",
-              imageUrl: uploadPreview,
+              imageUrl: uploadOriginal || uploadPreview,
               x: 0,
               y: 0,
               zIndex: 1,
@@ -165,7 +173,8 @@ export default function ProfilePage() {
           title: uploadTitle.trim().toUpperCase(),
           slug,
           category: uploadCategory,
-          svgDataUri: uploadPreview,
+          svgDataUri: uploadPreview, // Ultra-fast lightweight web preview
+          originalUrl: uploadOriginal || uploadPreview, // Real original uncompressed image for download
           tags: [uploadCategory, "user_upload", `author:${user.email.toLowerCase().trim()}`],
           authorEmail: user.email,
           width: 1080,
@@ -177,6 +186,7 @@ export default function ProfilePage() {
         setUploadSuccess("Meme successfully published to community archive and saved to your profile!");
         setUploadFile(null);
         setUploadPreview(null);
+        setUploadOriginal(null);
         setUploadTitle("");
         loadUserMemes(user.email);
       } else {

@@ -30,6 +30,7 @@ export interface Template {
   defaultTopText?: string;
   defaultBottomText?: string;
   svgDataUri: string; // Vector/data representation for rendering on HTML5 canvas and preview
+  originalUrl?: string | null; // Full-resolution original image for high-quality export/download
   tags: string[];
   trendingRank?: number;
   isWatermarkFree?: boolean;

@@ -28,27 +28,50 @@ export default function MemeCard({
     e.stopPropagation();
     try {
       setDownloading(true);
+      let sourceUrl = template.originalUrl || template.svgDataUri;
+
+      // If originalUrl wasn't loaded in the catalog list, fetch it on-demand for full real-size export
+      if (!template.originalUrl && template.id) {
+        try {
+          const res = await fetch(`/api/templates?id=${encodeURIComponent(template.id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.data?.originalUrl) {
+              sourceUrl = data.data.originalUrl;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("Could not fetch full-size original, falling back to preview:", fetchErr);
+        }
+      }
+
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.src = template.svgDataUri;
+      img.src = sourceUrl;
 
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
       });
 
+      // Export using real natural dimensions
+      const realWidth = img.naturalWidth || template.width || 1080;
+      const realHeight = img.naturalHeight || template.height || 1080;
+
       const canvas = document.createElement("canvas");
-      canvas.width = template.width;
-      canvas.height = template.height;
+      canvas.width = realWidth;
+      canvas.height = realHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      ctx.drawImage(img, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, realWidth, realHeight);
 
       const dataUrl = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = `lolcanvas-${template.slug}-clean.png`;
+      a.download = `lolcanvas-${template.slug}-original.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

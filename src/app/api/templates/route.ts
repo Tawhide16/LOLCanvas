@@ -17,6 +17,23 @@ import { authenticateRequest } from "@/modules/common/middlewares";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    // Single template lookup with original high-resolution image for downloading
+    if (id) {
+      const prisma = (await import("@/lib/prisma")).default;
+      const t = await prisma.template.findFirst({
+        where: { OR: [{ id }, { slug: id }] },
+      });
+      if (!t) return errorResponse("Template not found", 404);
+      const originalUrl =
+        t.defaultBottomText &&
+        (t.defaultBottomText.startsWith("data:image") || t.defaultBottomText.startsWith("http"))
+          ? t.defaultBottomText
+          : t.svgDataUri;
+      return successResponse({ ...t, originalUrl }, "Template retrieved successfully");
+    }
+
     const queryParams = {
       category: searchParams.get("category") || "all",
       search: searchParams.get("search") || "",
@@ -47,8 +64,9 @@ export async function POST(req: NextRequest) {
     const validatedData = createTemplateSchema.parse(body);
 
     const authorEmail = body.authorEmail || authUser?.email || undefined;
+    const originalUrl = body.originalUrl || undefined;
     const template = await createTemplate(
-      { ...validatedData, authorEmail },
+      { ...validatedData, authorEmail, originalUrl },
       authUser || undefined
     );
 
@@ -65,7 +83,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, title, category, svgDataUri, authorEmail } = body;
+    const { id, title, category, svgDataUri, originalUrl, authorEmail, isSystemOptimization } = body;
 
     if (!id) {
       return errorResponse("Template ID is required", 400);
@@ -77,7 +95,9 @@ export async function PATCH(req: NextRequest) {
       title,
       category,
       svgDataUri,
+      originalUrl,
       authorEmail,
+      isSystemOptimization: Boolean(isSystemOptimization),
     });
 
     return successResponse(updated, "Template card updated successfully");

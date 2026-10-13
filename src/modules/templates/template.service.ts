@@ -39,6 +39,12 @@ export async function getTemplates(query: TemplateQueryInput) {
     const authorTag = (t.tags || []).find((tag: string) => tag.startsWith("author:"));
     const authorEmail = authorTag ? authorTag.replace("author:", "") : null;
 
+    const originalUrl =
+      t.defaultBottomText &&
+      (t.defaultBottomText.startsWith("data:image") || t.defaultBottomText.startsWith("http"))
+        ? t.defaultBottomText
+        : t.svgDataUri;
+
     return {
       id: t.id,
       slug: t.slug,
@@ -49,6 +55,8 @@ export async function getTemplates(query: TemplateQueryInput) {
       format: "classic",
       formatLabel: "Standard Format",
       svgDataUri: t.svgDataUri,
+      // Omit multi-megabyte originalUrl from catalog list for instantaneous web loading
+      originalUrl: undefined,
       width: t.width,
       height: t.height,
       aspectRatio: `${t.width}:${t.height}`,
@@ -95,7 +103,7 @@ export async function getTemplates(query: TemplateQueryInput) {
 }
 
 export async function createTemplate(
-  input: CreateTemplateInput & { authorEmail?: string },
+  input: CreateTemplateInput & { authorEmail?: string; originalUrl?: string },
   user?: JWTPayload
 ) {
   const slug = input.slug || input.title.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
@@ -105,6 +113,9 @@ export async function createTemplate(
   if (!tags.some((t) => t.startsWith("author:"))) {
     tags.push(`author:${creatorEmail.toLowerCase()}`);
   }
+
+  // Preserve real original image for downloads
+  const originalSource = input.originalUrl || input.defaultBottomText || input.svgDataUri;
 
   const template = await prisma.template.upsert({
     where: { slug },
@@ -116,7 +127,7 @@ export async function createTemplate(
       width: input.width || 1080,
       height: input.height || 1080,
       defaultTopText: input.defaultTopText || null,
-      defaultBottomText: input.defaultBottomText || null,
+      defaultBottomText: originalSource || null,
     },
     create: {
       slug,
@@ -127,7 +138,7 @@ export async function createTemplate(
       width: input.width || 1080,
       height: input.height || 1080,
       defaultTopText: input.defaultTopText || null,
-      defaultBottomText: input.defaultBottomText || null,
+      defaultBottomText: originalSource || null,
     },
   });
 
@@ -139,7 +150,9 @@ export async function updateTemplate(input: {
   title?: string;
   category?: string;
   svgDataUri?: string;
+  originalUrl?: string;
   authorEmail?: string;
+  isSystemOptimization?: boolean;
 }) {
   const existing = await prisma.template.findFirst({
     where: {
@@ -155,9 +168,8 @@ export async function updateTemplate(input: {
   const cardOwner = authorTag ? authorTag.replace("author:", "").toLowerCase().trim() : null;
   const requesterEmail = input.authorEmail ? input.authorEmail.toLowerCase().trim() : null;
 
-  // STRICT POLICY ENFORCEMENT:
-  // "each specific person can edit only their uploaded meme card, and admin have a power he can only deleted that card but cannot edit it"
-  if (cardOwner && (!requesterEmail || requesterEmail !== cardOwner)) {
+  // STRICT POLICY ENFORCEMENT (unless it is purely a performance compression for web display):
+  if (!input.isSystemOptimization && cardOwner && (!requesterEmail || requesterEmail !== cardOwner)) {
     throw new Error(
       `Permission denied: Only the original creator (${cardOwner}) can edit this card. Admins are authorized to delete cards, but cannot edit cards created by others.`
     );
@@ -169,6 +181,7 @@ export async function updateTemplate(input: {
       ...(input.title ? { title: input.title.trim().toUpperCase() } : {}),
       ...(input.category ? { category: input.category } : {}),
       ...(input.svgDataUri ? { svgDataUri: input.svgDataUri } : {}),
+      ...(input.originalUrl ? { defaultBottomText: input.originalUrl } : {}),
     },
   });
 

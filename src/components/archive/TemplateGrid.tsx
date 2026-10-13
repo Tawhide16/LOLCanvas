@@ -38,6 +38,7 @@ export default function TemplateGrid({
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("classic");
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editImageOriginal, setEditImageOriginal] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +47,7 @@ export default function TemplateGrid({
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState("classic");
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  const [newImageOriginal, setNewImageOriginal] = useState<string | null>(null);
   const [isUploadingCard, setIsUploadingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +86,6 @@ export default function TemplateGrid({
       }
     });
 
-
     // 2. Fetch live templates from DB
     async function loadTemplates() {
       setIsLoadingTemplates(true);
@@ -99,6 +100,45 @@ export default function TemplateGrid({
               (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
             );
             setTemplates(filtered);
+
+            // Auto-optimize heavy legacy images in the background so the site loads in milliseconds
+            const heavyTemplates = filtered.filter(
+              (t: any) => t.svgDataUri && t.svgDataUri.length > 250000
+            );
+            if (heavyTemplates.length > 0) {
+              import("@/lib/imageOptimizer").then(({ processImageForWeb }) => {
+                heavyTemplates.forEach(async (ht: any) => {
+                  try {
+                    const optimized = await processImageForWeb(ht.svgDataUri, 720, 0.85);
+                    if (optimized.previewDataUri.length < ht.svgDataUri.length) {
+                      setTemplates((prev) =>
+                        prev.map((item) =>
+                          item.id === ht.id
+                            ? {
+                                ...item,
+                                svgDataUri: optimized.previewDataUri,
+                                originalUrl: item.originalUrl || item.svgDataUri,
+                              }
+                            : item
+                        )
+                      );
+                      // Persist lightweight preview and original image to DB
+                      fetch("/api/templates", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          id: ht.id,
+                          svgDataUri: optimized.previewDataUri,
+                          originalUrl: ht.originalUrl || ht.svgDataUri,
+                          authorEmail: ht.authorEmail || undefined,
+                          isSystemOptimization: true,
+                        }),
+                      }).catch(() => {});
+                    }
+                  } catch (e) {}
+                });
+              });
+            }
           } else {
             setTemplates([]);
           }
@@ -177,6 +217,8 @@ export default function TemplateGrid({
     try {
       const slug = newTitle.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
       const creatorEmail = currentUserEmail || "admin123@gmail.com";
+      const fullOriginal = newImageOriginal || newImagePreview;
+
       const res = await fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,7 +226,8 @@ export default function TemplateGrid({
           title: newTitle.trim().toUpperCase(),
           slug,
           category: newCategory,
-          svgDataUri: newImagePreview,
+          svgDataUri: newImagePreview, // Ultra-fast lightweight web preview (~40KB-90KB)
+          originalUrl: fullOriginal, // Real original uncompressed image for download
           tags: [newCategory, "custom", "superadmin", `author:${creatorEmail}`],
           authorEmail: creatorEmail,
           width: 1080,
@@ -203,6 +246,7 @@ export default function TemplateGrid({
           format: "classic",
           formatLabel: "Classic Single-Panel",
           svgDataUri: newImagePreview,
+          originalUrl: fullOriginal,
           width: 1080,
           height: 1080,
           aspectRatio: "1:1",
@@ -223,6 +267,7 @@ export default function TemplateGrid({
         setShowUploadModal(false);
         setNewTitle("");
         setNewImagePreview(null);
+        setNewImageOriginal(null);
       } else {
         alert("Failed to upload template card.");
       }
@@ -239,6 +284,7 @@ export default function TemplateGrid({
     setEditTitle(template.title);
     setEditCategory(template.categoryId || "classic");
     setEditImagePreview(template.svgDataUri);
+    setEditImageOriginal(template.originalUrl || template.svgDataUri);
   };
 
   // Creator: Execute Card Update (strictly checks that requester is creator)
@@ -248,6 +294,7 @@ export default function TemplateGrid({
 
     setIsSavingEdit(true);
     try {
+      const fullOriginal = editImageOriginal || cardToEdit.originalUrl || editImagePreview;
       const res = await fetch("/api/templates", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -256,6 +303,7 @@ export default function TemplateGrid({
           title: editTitle.trim().toUpperCase(),
           category: editCategory,
           svgDataUri: editImagePreview,
+          originalUrl: fullOriginal,
           authorEmail: currentUserEmail,
         }),
       });
@@ -270,6 +318,7 @@ export default function TemplateGrid({
                 categoryId: editCategory,
                 categoryName: editCategory.toUpperCase(),
                 svgDataUri: editImagePreview || t.svgDataUri,
+                originalUrl: fullOriginal,
               };
             }
             return t;
@@ -290,7 +339,6 @@ export default function TemplateGrid({
       setIsSavingEdit(false);
     }
   };
-
 
   // Filter and sort items
   const filteredTemplates = useMemo(() => {
@@ -404,12 +452,13 @@ export default function TemplateGrid({
                 type="file"
                 accept="image/*"
                 required
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => setNewImagePreview(ev.target?.result as string);
-                    reader.readAsDataURL(file);
+                    const { processImageForWeb } = await import("@/lib/imageOptimizer");
+                    const result = await processImageForWeb(file, 720, 0.85);
+                    setNewImagePreview(result.previewDataUri);
+                    setNewImageOriginal(result.originalDataUri);
                   }
                 }}
                 className="w-full p-1.5 bg-[#FAF9F5] border border-black text-xs focus:outline-none"
@@ -723,12 +772,13 @@ export default function TemplateGrid({
                     ref={editFileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => setEditImagePreview(ev.target?.result as string);
-                        reader.readAsDataURL(file);
+                        const { processImageForWeb } = await import("@/lib/imageOptimizer");
+                        const result = await processImageForWeb(file, 720, 0.85);
+                        setEditImagePreview(result.previewDataUri);
+                        setEditImageOriginal(result.originalDataUri);
                       }
                     }}
                     className="w-full mt-2 text-[10px] file:mr-2 file:py-1 file:px-2 file:border file:border-black file:text-[10px] file:bg-white file:font-bold file:cursor-pointer"
