@@ -25,6 +25,12 @@
 - **Preset Libraries**: 1-click overlays (Thug Life shades, Doge heads, Laser Eyes, Flame emojis) and platform canvas aspect ratios (Instagram, TikTok, YouTube Shorts, X/Twitter).
 - **Clean PNG Exports**: 100% watermark-free high-resolution PNG generation and direct-to-clipboard copying.
 - **Enterprise Database & Cloud Storage Ready**: Full integration with **Prisma ORM**, **PostgreSQL**, **Neon Serverless**, and **Supabase** (Database + Storage + Auth).
+- **Modern Modular Backend Architecture**:
+  - **Zod**: Strict runtime data validation for canvas layers, captions, templates, and auth.
+  - **Redis Caching**: Sub-millisecond response caching for trending templates and queries.
+  - **JWT Authentication**: Stateless authentication with `jose` and HTTP-only secure session cookies.
+  - **RBAC**: Multi-tier role permissions (`CREATOR`, `CURATOR`, `ADMIN`).
+  - **Rate Limiting**: Sliding window protection against DDoS, bot scraping, and upload flooding.
 - **Containerized**: Production-ready **Dockerfile** (multi-stage) and **Docker Compose** with local PostgreSQL service.
 
 ---
@@ -34,6 +40,9 @@
 | Layer | Technology |
 |---|---|
 | **Framework** | Next.js 16 (Turbopack, App Router, React 19) |
+| **Validation** | Zod v3 |
+| **Authentication & RBAC** | Stateless JWT (`jose`), BCrypt password hashing, Multi-Role Access Control |
+| **Caching & Rate Limiting** | Redis (Upstash) with In-Memory fallback, Sliding Window Limiter |
 | **Styling** | Swiss Neo-Brutalist Design System, TailwindCSS v4, Vanilla CSS |
 | **Animation** | Framer Motion |
 | **Icons** | Lucide React |

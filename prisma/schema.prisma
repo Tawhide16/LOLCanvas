@@ -17,6 +17,7 @@ datasource db {
 model User {
   id            String       @id @default(cuid())
   email         String       @unique
+  passwordHash  String?
   name          String?
   avatarUrl     String?
   role          String       @default("CREATOR") // CREATOR, CURATOR, ADMIN
