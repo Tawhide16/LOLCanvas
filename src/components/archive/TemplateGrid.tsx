@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2 } from "lucide-react";
+import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle } from "lucide-react";
 import FilterBar from "./FilterBar";
 import MemeCard from "./MemeCard";
 import { TEMPLATES } from "@/lib/data";
@@ -26,6 +26,10 @@ export default function TemplateGrid({
   // Dynamic template archive state
   const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Delete card popup modal state
+  const [cardToDelete, setCardToDelete] = useState<Template | null>(null);
+  const [isDeletingCard, setIsDeletingCard] = useState(false);
 
   // Admin upload card modal
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -83,23 +87,55 @@ export default function TemplateGrid({
     loadTemplates();
   }, []);
 
-  // Super Admin: Remove ANY card from website
-  const handleAdminDeleteCard = async (idOrSlug: string, title: string) => {
-    if (!confirm(`SUPER ADMIN ACTION: Remove card "${title}" from the website?`)) return;
+  // Super Admin: Open popup modal to delete specific card
+  const handleAdminDeleteCard = (idOrSlug: string, title: string) => {
+    const target =
+      templates.find((t) => t.id === idOrSlug || t.slug === idOrSlug) ||
+      templates.find((t) => t.title.toLowerCase() === title.toLowerCase());
+
+    if (target) {
+      setCardToDelete(target);
+    } else {
+      setCardToDelete({
+        id: idOrSlug,
+        slug: idOrSlug,
+        title: title,
+        categoryName: "TEMPLATE",
+        svgDataUri: "",
+      } as any);
+    }
+  };
+
+  // Super Admin: Execute confirmed card deletion
+  const handleExecuteDeleteCard = async () => {
+    if (!cardToDelete) return;
+    setIsDeletingCard(true);
+    const targetId = cardToDelete.id || cardToDelete.slug;
 
     try {
-      await fetch(`/api/templates?id=${encodeURIComponent(idOrSlug)}`, {
+      const res = await fetch(`/api/templates?id=${encodeURIComponent(targetId)}`, {
         method: "DELETE",
-      }).catch(() => {});
+      });
 
-      // Track locally removed
-      const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
-      removedIds.push(idOrSlug);
-      localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
+      if (res.ok) {
+        // Track locally removed
+        const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+        removedIds.push(targetId);
+        if (cardToDelete.slug) removedIds.push(cardToDelete.slug);
+        localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
 
-      setTemplates((prev) => prev.filter((t) => t.id !== idOrSlug && t.slug !== idOrSlug));
+        setTemplates((prev) =>
+          prev.filter((t) => t.id !== targetId && t.slug !== targetId && t.slug !== cardToDelete.slug)
+        );
+        setCardToDelete(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to delete card: ${data.message || "Unknown error"}`);
+      }
     } catch (err) {
-      alert("Error removing card");
+      alert("Network error removing card");
+    } finally {
+      setIsDeletingCard(false);
     }
   };
 
@@ -130,19 +166,24 @@ export default function TemplateGrid({
           id: slug,
           slug,
           title: newTitle.trim().toUpperCase(),
-          index: `0${templates.length + 1}`,
+          index: `№ ${(templates.length + 1).toString().padStart(4, "0")}`,
           categoryId: newCategory,
           categoryName: newCategory.toUpperCase(),
           format: "classic",
+          formatLabel: "Classic Single-Panel",
           svgDataUri: newImagePreview,
           width: 1080,
           height: 1080,
+          aspectRatio: "1:1",
+          source: "SUPER ADMIN UPLOAD",
+          license: "PUBLIC DOMAIN (CC0)",
           tags: [newCategory, "custom"],
           defaultTopText: "",
           defaultBottomText: "",
           isWatermarkFree: true,
           trendingRank: 1,
           remixCount: 1200,
+          downloadCount: 800,
           createdAt: new Date().toISOString(),
         };
 
@@ -432,6 +473,91 @@ export default function TemplateGrid({
                 <Wand2 className="w-3.5 h-3.5" />
                 LAUNCH IN CANVAS EDITOR
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Delete Confirmation Popup Modal */}
+      {cardToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F5] border-2 border-black w-full max-w-md shadow-[8px_8px_0px_0px_rgba(225,29,72,1)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black px-4 py-3 bg-[#FFF1F2] font-mono-code text-xs">
+              <div className="flex items-center gap-2 text-[#E11D48] font-bold uppercase">
+                <AlertTriangle className="w-4 h-4 text-[#E11D48]" />
+                <span>CONFIRM CARD REMOVAL</span>
+              </div>
+              <button
+                onClick={() => setCardToDelete(null)}
+                disabled={isDeletingCard}
+                className="p-1 hover:bg-black hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Card Summary Card */}
+              <div className="flex items-center gap-4 p-3 bg-white border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="w-20 h-20 shrink-0 bg-[#FAF9F5] border border-black/20 flex items-center justify-center overflow-hidden p-1">
+                  {cardToDelete.svgDataUri ? (
+                    <img
+                      src={cardToDelete.svgDataUri}
+                      alt={cardToDelete.title}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="font-mono-code text-[9px] text-[#777777]">NO PREVIEW</span>
+                  )}
+                </div>
+                <div className="space-y-1 overflow-hidden min-w-0">
+                  <span className="font-mono-code text-[10px] text-[#E11D48] font-bold uppercase tracking-wider block">
+                    {cardToDelete.categoryName || "ARCHIVE CARD"}
+                  </span>
+                  <h4 className="font-display font-black text-sm uppercase text-black truncate">
+                    {cardToDelete.title}
+                  </h4>
+                  <span className="font-mono-code text-[10px] text-[#777777] block truncate">
+                    ID: {cardToDelete.id || cardToDelete.slug}
+                  </span>
+                </div>
+              </div>
+
+              {/* Warning Notice */}
+              <div className="p-3 bg-[#FFF1F2] border border-[#E11D48] font-mono-code text-xs text-black space-y-1">
+                <p className="font-bold text-[#E11D48] uppercase flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  PERMANENT DELETION WARNING
+                </p>
+                <p className="text-[11px] text-[#333333]">
+                  Are you sure you want to delete this specific card? It will be removed permanently from the website archive and the Neon PostgreSQL database.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="border-t border-black p-4 bg-[#FAF9F5] flex items-center justify-end gap-3 font-mono-code text-xs">
+              <button
+                type="button"
+                onClick={() => setCardToDelete(null)}
+                disabled={isDeletingCard}
+                className="px-4 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold transition-colors disabled:opacity-50"
+              >
+                CANCEL
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExecuteDeleteCard}
+                disabled={isDeletingCard}
+                className="px-5 py-2 bg-[#E11D48] text-white hover:bg-black uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingCard ? "DELETING..." : "YES, DELETE CARD ■"}</span>
+              </button>
             </div>
           </div>
         </div>

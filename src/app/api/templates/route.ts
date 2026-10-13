@@ -62,16 +62,34 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    if (!id) {
-      return errorResponse("Template ID or slug is required", 400);
+    const idsParam = searchParams.get("ids");
+
+    let idsToDelete: string[] = [];
+    if (idsParam) {
+      idsToDelete = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (id) {
+      idsToDelete = [id];
+    } else {
+      try {
+        const body = await req.json();
+        if (body.ids && Array.isArray(body.ids)) {
+          idsToDelete = body.ids;
+        } else if (body.id) {
+          idsToDelete = [body.id];
+        }
+      } catch (e) {}
     }
 
-    const { deleteTemplate } = await import("@/modules/templates/template.service");
-    const result = await deleteTemplate(id);
+    if (idsToDelete.length === 0) {
+      return errorResponse("Template ID or IDs required for deletion", 400);
+    }
 
-    return successResponse(result, "Template removed successfully");
+    const { deleteMultipleTemplates } = await import("@/modules/templates/template.service");
+    const result = await deleteMultipleTemplates(idsToDelete);
+
+    return successResponse(result, `Removed ${result.count} template card(s) successfully`);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to remove template";
+    const message = err instanceof Error ? err.message : "Failed to remove template(s)";
     return errorResponse(message, 400);
   }
 }

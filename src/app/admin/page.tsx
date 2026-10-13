@@ -20,6 +20,9 @@ import {
   ArrowUpRight,
   UserCheck,
   ShieldCheck,
+  CheckSquare,
+  Square,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -95,16 +98,38 @@ interface AuditLogItem {
   createdAt: string;
 }
 
+interface TemplateItem {
+  id: string;
+  slug: string;
+  title: string;
+  categoryId: string;
+  categoryName: string;
+  svgDataUri: string;
+  width: number;
+  height: number;
+  tags: string[];
+  createdAt: string;
+}
+
 export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "memes" | "audit">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "memes" | "audit" | "templates">("overview");
 
   // Data states
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [memes, setMemes] = useState<MemeItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [adminTemplates, setAdminTemplates] = useState<TemplateItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Template multi-selection & delete states
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState("all");
+  const [cardToDeleteInAdmin, setCardToDeleteInAdmin] = useState<TemplateItem | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
 
   // Filters & Actions
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,11 +160,12 @@ export default function AdminPage() {
   const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [statsRes, usersRes, memesRes, auditRes] = await Promise.all([
+      const [statsRes, usersRes, memesRes, auditRes, templatesRes] = await Promise.all([
         fetch("/api/admin/stats"),
         fetch(`/api/admin/users?search=${encodeURIComponent(searchQuery)}&role=${roleFilter}`),
         fetch("/api/admin/memes"),
         fetch("/api/admin/audit-logs"),
+        fetch("/api/templates?limit=100"),
       ]);
 
       if (statsRes.ok) {
@@ -157,6 +183,10 @@ export default function AdminPage() {
       if (auditRes.ok) {
         const data = await auditRes.json();
         setAuditLogs(data.data || []);
+      }
+      if (templatesRes.ok) {
+        const data = await templatesRes.json();
+        setAdminTemplates(data.data?.templates || []);
       }
     } catch (err) {
       console.error("Dashboard fetch failed:", err);
@@ -281,6 +311,114 @@ export default function AdminPage() {
       loadDashboardData();
     } catch (err) {
       alert("Failed to remove meme");
+    }
+  };
+
+  // Filter templates for admin tab
+  const filteredAdminTemplates = React.useMemo(() => {
+    let result = [...adminTemplates];
+    if (templateCategoryFilter !== "all") {
+      result = result.filter(
+        (t) =>
+          t.categoryId?.toLowerCase() === templateCategoryFilter.toLowerCase() ||
+          t.categoryName?.toLowerCase() === templateCategoryFilter.toLowerCase()
+      );
+    }
+    if (templateSearch.trim()) {
+      const q = templateSearch.toLowerCase().trim();
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.slug.toLowerCase().includes(q) ||
+          (t.tags && t.tags.some((tag) => tag.toLowerCase().includes(q)))
+      );
+    }
+    return result;
+  }, [adminTemplates, templateCategoryFilter, templateSearch]);
+
+  // Multi-selector: Toggle individual card selection
+  const handleToggleSelectTemplate = (idOrSlug: string) => {
+    setSelectedTemplateIds((prev) =>
+      prev.includes(idOrSlug) ? prev.filter((id) => id !== idOrSlug) : [...prev, idOrSlug]
+    );
+  };
+
+  // Multi-selector: Toggle select all visible
+  const handleToggleSelectAllTemplates = (visibleIds: string[]) => {
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedTemplateIds.includes(id));
+    if (allSelected) {
+      setSelectedTemplateIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      const merged = Array.from(new Set([...selectedTemplateIds, ...visibleIds]));
+      setSelectedTemplateIds(merged);
+    }
+  };
+
+  // Open single card deletion popup in Admin
+  const handleOpenDeleteSingleCard = (template: TemplateItem) => {
+    setCardToDeleteInAdmin(template);
+  };
+
+  // Confirm Single Card Deletion in Admin
+  const handleConfirmDeleteSingle = async () => {
+    if (!cardToDeleteInAdmin) return;
+    setIsDeletingTemplates(true);
+    const targetId = cardToDeleteInAdmin.id || cardToDeleteInAdmin.slug;
+    try {
+      const res = await fetch(`/api/templates?id=${encodeURIComponent(targetId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setAdminTemplates((prev) => prev.filter((t) => t.id !== targetId && t.slug !== targetId));
+        setSelectedTemplateIds((prev) => prev.filter((id) => id !== targetId && id !== cardToDeleteInAdmin.slug));
+
+        // Update local storage removed tracker
+        const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+        removedIds.push(targetId);
+        if (cardToDeleteInAdmin.slug) removedIds.push(cardToDeleteInAdmin.slug);
+        localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
+
+        setCardToDeleteInAdmin(null);
+        loadDashboardData();
+      } else {
+        alert("Failed to delete card");
+      }
+    } catch (e) {
+      alert("Error deleting card");
+    } finally {
+      setIsDeletingTemplates(false);
+    }
+  };
+
+  // Confirm Bulk Card Deletion in Admin
+  const handleConfirmBulkDelete = async () => {
+    if (selectedTemplateIds.length === 0) return;
+    setIsDeletingTemplates(true);
+    try {
+      const res = await fetch("/api/templates", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedTemplateIds }),
+      });
+      if (res.ok) {
+        const deletedSet = new Set(selectedTemplateIds);
+        setAdminTemplates((prev) => prev.filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug)));
+
+        // Update local storage removed tracker
+        const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+        selectedTemplateIds.forEach((id) => removedIds.push(id));
+        localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
+
+        setSelectedTemplateIds([]);
+        setShowBulkDeleteModal(false);
+        loadDashboardData();
+      } else {
+        alert("Failed to delete selected cards");
+      }
+    } catch (e) {
+      alert("Error during bulk delete");
+    } finally {
+      setIsDeletingTemplates(false);
     }
   };
 
@@ -466,6 +604,18 @@ export default function AdminPage() {
           >
             [04 // AUDIT LOGS & TRAIL] ({auditLogs.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab("templates")}
+            className={`px-4 py-2 uppercase font-bold border border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 ${
+              activeTab === "templates" ? "bg-black text-white" : "bg-white text-black hover:bg-[#E6E4DC]"
+            }`}
+          >
+            <span>[05 // TEMPLATE CARDS & BULK REMOVE]</span>
+            <span className="bg-[#E11D48] text-white px-1.5 py-0.5 text-[10px] font-mono-code font-bold">
+              {adminTemplates.length}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -513,6 +663,14 @@ export default function AdminPage() {
                     <span>INSPECT TEMPLATE ARCHIVE</span>
                     <ArrowUpRight className="w-4 h-4" />
                   </Link>
+
+                  <button
+                    onClick={() => setActiveTab("templates")}
+                    className="w-full py-2.5 px-3 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white font-bold uppercase text-left flex items-center justify-between transition-colors shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
+                  >
+                    <span>MANAGE & BULK REMOVE CARDS</span>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -939,7 +1097,409 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* ============================================================== */}
+        {/* TAB 5: TEMPLATE CARDS & BULK REMOVAL                           */}
+        {/* ============================================================== */}
+        {activeTab === "templates" && (
+          <div className="space-y-6">
+            {/* Header & Subtitle */}
+            <div className="border-b border-black pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-mono-code uppercase font-bold text-[#E11D48] mb-1">
+                  <Crown className="w-3.5 h-3.5" />
+                  SUPER ADMIN ARCHIVE CONTROL
+                </div>
+                <h3 className="font-display font-black text-2xl uppercase text-black">
+                  TEMPLATE CARDS & MULTI-SELECTOR REMOVAL
+                </h3>
+                <p className="font-mono-code text-xs text-[#666666] mt-0.5">
+                  Select multiple cards using checkboxes to bulk delete, or remove individual cards with confirmation.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/cards"
+                  target="_blank"
+                  className="px-4 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase hover:bg-[#E6E4DC] flex items-center gap-1.5 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <span>VIEW PUBLIC ARCHIVE</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Filter and Multi-Select Control Bar */}
+            <div className="bg-white border border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                {/* Search & Category Filter */}
+                <div className="flex flex-wrap items-center gap-2 flex-1">
+                  <div className="relative flex-1 min-w-[200px] max-w-md">
+                    <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#777777]" />
+                    <input
+                      type="text"
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      placeholder="SEARCH BY TITLE, SLUG OR TAG..."
+                      className="pl-9 pr-4 py-2 bg-[#FAF9F5] border border-black font-mono-code text-xs font-bold w-full focus:outline-none"
+                    />
+                  </div>
+
+                  <select
+                    value={templateCategoryFilter}
+                    onChange={(e) => setTemplateCategoryFilter(e.target.value)}
+                    className="px-3 py-2 bg-[#FAF9F5] border border-black font-mono-code text-xs font-bold uppercase focus:outline-none"
+                  >
+                    <option value="all">ALL CATEGORIES</option>
+                    <option value="classic">CLASSIC FORMATS</option>
+                    <option value="reaction">REACTION & SHOCK</option>
+                    <option value="relatable">WORK & EVERYDAY</option>
+                    <option value="modern">BRAINROT & SURREAL</option>
+                    <option value="crypto">FINANCE & CRYPTO</option>
+                    <option value="animals">ANIMALS & CHAOS</option>
+                  </select>
+                </div>
+
+                {/* Counter */}
+                <div className="font-mono-code text-xs text-[#777777] self-center">
+                  SHOWING {filteredAdminTemplates.length} OF {adminTemplates.length} CARDS
+                </div>
+              </div>
+
+              {/* Multi-Selection Control Strip */}
+              <div className="pt-3 border-t border-black/10 flex flex-wrap items-center justify-between gap-3 font-mono-code text-xs">
+                {/* Select All Checkbox */}
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredAdminTemplates.length > 0 &&
+                        filteredAdminTemplates.every((t) =>
+                          selectedTemplateIds.includes(t.id) || selectedTemplateIds.includes(t.slug)
+                        )
+                      }
+                      onChange={() =>
+                        handleToggleSelectAllTemplates(filteredAdminTemplates.map((t) => t.id || t.slug))
+                      }
+                      className="w-4 h-4 rounded-none accent-[#E11D48] cursor-pointer"
+                    />
+                    <span className="text-black uppercase">
+                      SELECT ALL ({filteredAdminTemplates.length})
+                    </span>
+                  </label>
+
+                  {selectedTemplateIds.length > 0 && (
+                    <button
+                      onClick={() => setSelectedTemplateIds([])}
+                      className="text-[11px] text-[#777777] hover:text-black underline uppercase"
+                    >
+                      CLEAR SELECTION
+                    </button>
+                  )}
+                </div>
+
+                {/* Bulk Actions Button */}
+                <div className="flex items-center gap-2">
+                  {selectedTemplateIds.length > 0 ? (
+                    <div className="flex items-center gap-2 animate-in fade-in">
+                      <span className="px-2.5 py-1 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] font-bold text-[11px]">
+                        [{selectedTemplateIds.length} SELECTED]
+                      </span>
+                      <button
+                        onClick={() => setShowBulkDeleteModal(true)}
+                        className="px-4 py-2 bg-[#E11D48] text-white hover:bg-black font-bold uppercase transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>DELETE SELECTED CARDS ({selectedTemplateIds.length}) ■</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-[#777777] italic">
+                      Check any boxes below to enable multi-card removal
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Template Grid with Checkboxes */}
+            {filteredAdminTemplates.length === 0 ? (
+              <div className="p-16 text-center font-mono-code text-xs text-[#777777] bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                NO TEMPLATE CARDS FOUND MATCHING SEARCH / FILTER CRITERIA.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredAdminTemplates.map((t) => {
+                  const cardKey = t.id || t.slug;
+                  const isSelected = selectedTemplateIds.includes(cardKey) || selectedTemplateIds.includes(t.slug);
+
+                  return (
+                    <div
+                      key={cardKey}
+                      className={`relative bg-white border transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? "border-[#E11D48] ring-2 ring-[#E11D48] shadow-[4px_4px_0px_0px_rgba(225,29,72,1)]"
+                          : "border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      }`}
+                    >
+                      {/* Checkbox Header */}
+                      <div
+                        onClick={() => handleToggleSelectTemplate(cardKey)}
+                        className={`p-2.5 border-b flex items-center justify-between cursor-pointer select-none transition-colors ${
+                          isSelected ? "bg-[#FFF1F2] border-[#E11D48]" : "bg-[#FAF9F5] border-black/15"
+                        }`}
+                      >
+                        <label
+                          className="flex items-center gap-2 cursor-pointer font-mono-code text-xs font-bold"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectTemplate(cardKey)}
+                            className="w-4 h-4 rounded-none accent-[#E11D48] cursor-pointer"
+                          />
+                          <span className={isSelected ? "text-[#E11D48]" : "text-black"}>
+                            {isSelected ? "SELECTED" : "SELECT"}
+                          </span>
+                        </label>
+
+                        <span className="font-mono-code text-[10px] uppercase font-bold text-[#777777]">
+                          {t.categoryName || t.categoryId}
+                        </span>
+                      </div>
+
+                      {/* Card Preview Image */}
+                      <div
+                        onClick={() => handleToggleSelectTemplate(cardKey)}
+                        className="p-4 bg-white flex items-center justify-center aspect-[4/3] cursor-pointer overflow-hidden"
+                      >
+                        {t.svgDataUri ? (
+                          <img
+                            src={t.svgDataUri}
+                            alt={t.title}
+                            className="max-h-full max-w-full object-contain border border-black/10"
+                          />
+                        ) : (
+                          <div className="font-mono-code text-xs text-[#777777]">NO PREVIEW</div>
+                        )}
+                      </div>
+
+                      {/* Card Info & Individual Delete */}
+                      <div className="p-3 bg-[#FAF9F5] border-t border-black/15 space-y-2">
+                        <div>
+                          <h4 className="font-display font-black text-xs uppercase text-black truncate" title={t.title}>
+                            {t.title}
+                          </h4>
+                          <span className="font-mono-code text-[10px] text-[#777777] block truncate">
+                            SLUG: {t.slug}
+                          </span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="grid grid-cols-2 gap-2 pt-1 font-mono-code text-[11px]">
+                          <Link
+                            href={`/edit/${t.slug}`}
+                            target="_blank"
+                            className="py-1 px-2 bg-white border border-black text-black hover:bg-[#E6E4DC] font-bold uppercase text-center transition-colors flex items-center justify-center gap-1"
+                          >
+                            <span>VIEW</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDeleteSingleCard(t)}
+                            className="py-1 px-2 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white font-bold uppercase text-center transition-colors flex items-center justify-center gap-1 shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>DELETE</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Single Card Delete Confirmation Modal (Admin) */}
+      {cardToDeleteInAdmin && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F5] border-2 border-black w-full max-w-md shadow-[8px_8px_0px_0px_rgba(225,29,72,1)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black px-4 py-3 bg-[#FFF1F2] font-mono-code text-xs">
+              <div className="flex items-center gap-2 text-[#E11D48] font-bold uppercase">
+                <AlertTriangle className="w-4 h-4 text-[#E11D48]" />
+                <span>CONFIRM CARD REMOVAL</span>
+              </div>
+              <button
+                onClick={() => setCardToDeleteInAdmin(null)}
+                disabled={isDeletingTemplates}
+                className="p-1 hover:bg-black hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-4 p-3 bg-white border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="w-20 h-20 shrink-0 bg-[#FAF9F5] border border-black/20 flex items-center justify-center overflow-hidden p-1">
+                  {cardToDeleteInAdmin.svgDataUri ? (
+                    <img
+                      src={cardToDeleteInAdmin.svgDataUri}
+                      alt={cardToDeleteInAdmin.title}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="font-mono-code text-[9px] text-[#777777]">NO PREVIEW</span>
+                  )}
+                </div>
+                <div className="space-y-1 overflow-hidden min-w-0">
+                  <span className="font-mono-code text-[10px] text-[#E11D48] font-bold uppercase tracking-wider block">
+                    {cardToDeleteInAdmin.categoryName || "ARCHIVE CARD"}
+                  </span>
+                  <h4 className="font-display font-black text-sm uppercase text-black truncate">
+                    {cardToDeleteInAdmin.title}
+                  </h4>
+                  <span className="font-mono-code text-[10px] text-[#777777] block truncate">
+                    ID: {cardToDeleteInAdmin.id || cardToDeleteInAdmin.slug}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#FFF1F2] border border-[#E11D48] font-mono-code text-xs text-black space-y-1">
+                <p className="font-bold text-[#E11D48] uppercase flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  PERMANENT DELETION WARNING
+                </p>
+                <p className="text-[11px] text-[#333333]">
+                  Are you sure you want to remove &quot;{cardToDeleteInAdmin.title}&quot;? It will be deleted from Neon PostgreSQL database immediately.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-black p-4 bg-[#FAF9F5] flex items-center justify-end gap-3 font-mono-code text-xs">
+              <button
+                type="button"
+                onClick={() => setCardToDeleteInAdmin(null)}
+                disabled={isDeletingTemplates}
+                className="px-4 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold transition-colors disabled:opacity-50"
+              >
+                CANCEL
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSingle}
+                disabled={isDeletingTemplates}
+                className="px-5 py-2 bg-[#E11D48] text-white hover:bg-black uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingTemplates ? "DELETING..." : "YES, DELETE CARD ■"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal (Admin) */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F5] border-2 border-black w-full max-w-lg shadow-[8px_8px_0px_0px_rgba(225,29,72,1)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black px-4 py-3 bg-[#FFF1F2] font-mono-code text-xs">
+              <div className="flex items-center gap-2 text-[#E11D48] font-bold uppercase">
+                <AlertTriangle className="w-4 h-4 text-[#E11D48]" />
+                <span>CONFIRM BULK CARD REMOVAL ({selectedTemplateIds.length} ITEMS)</span>
+              </div>
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isDeletingTemplates}
+                className="p-1 hover:bg-black hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="p-3 bg-[#FFF1F2] border border-[#E11D48] font-mono-code text-xs text-black space-y-1">
+                <p className="font-bold text-[#E11D48] uppercase flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  PERMANENT BULK DELETION NOTICE
+                </p>
+                <p className="text-[11px] text-[#333333]">
+                  You have selected <span className="font-bold text-[#E11D48]">{selectedTemplateIds.length} cards</span>.
+                  Continuing will remove all of them from the Neon PostgreSQL database permanently.
+                </p>
+              </div>
+
+              {/* List of selected cards */}
+              <div className="space-y-2">
+                <div className="font-mono-code text-[10px] text-[#777777] font-bold uppercase">
+                  CARDS TO BE DELETED ({selectedTemplateIds.length}):
+                </div>
+                <div className="divide-y divide-black/10 border border-black bg-white max-h-48 overflow-y-auto">
+                  {selectedTemplateIds.map((id) => {
+                    const found = adminTemplates.find((t) => t.id === id || t.slug === id);
+                    return (
+                      <div key={id} className="p-2 flex items-center gap-3 font-mono-code text-xs">
+                        <div className="w-10 h-10 shrink-0 bg-[#FAF9F5] border border-black/10 flex items-center justify-center overflow-hidden">
+                          {found?.svgDataUri ? (
+                            <img src={found.svgDataUri} alt={found.title} className="max-h-full max-w-full object-contain" />
+                          ) : (
+                            <span className="text-[8px] text-[#777777]">SVG</span>
+                          )}
+                        </div>
+                        <div className="overflow-hidden min-w-0 flex-1">
+                          <div className="font-bold uppercase text-black truncate">{found?.title || id}</div>
+                          <div className="text-[10px] text-[#777777] truncate">{id}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-black p-4 bg-[#FAF9F5] flex items-center justify-end gap-3 font-mono-code text-xs">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isDeletingTemplates}
+                className="px-4 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold transition-colors disabled:opacity-50"
+              >
+                CANCEL
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                disabled={isDeletingTemplates}
+                className="px-5 py-2 bg-[#E11D48] text-white hover:bg-black uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>
+                  {isDeletingTemplates
+                    ? `DELETING (${selectedTemplateIds.length})...`
+                    : `CONFIRM BULK DELETE (${selectedTemplateIds.length}) ■`}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

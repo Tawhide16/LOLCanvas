@@ -32,6 +32,7 @@ export interface Template {
   svgDataUri: string; // Vector/data representation for rendering on HTML5 canvas and preview
   tags: string[];
   trendingRank?: number;
+  isWatermarkFree?: boolean;
 }
 
 export interface CanvasLayer {

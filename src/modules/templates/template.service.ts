@@ -23,39 +23,45 @@ export async function getTemplates(query: TemplateQueryInput) {
     console.warn("Redis read failed, querying database/memory:", err);
   }
 
-  // 2. Query Data from Neon DB + Built-in catalog
+  // 2. Query Data from Neon DB
   let dbTemplates: any[] = [];
   try {
     dbTemplates = await prisma.template.findMany({
       orderBy: { createdAt: "desc" },
     });
   } catch (err) {
-    console.warn("DB query for templates failed, using built-in catalog:", err);
+    console.warn("DB query for templates failed, using built-in catalog fallback:", err);
+    dbTemplates = [];
   }
 
-  const dbFormatted = dbTemplates.map((t) => ({
+  // Format DB templates
+  let results: any[] = dbTemplates.map((t, idx) => ({
     id: t.id,
     slug: t.slug,
+    index: `№ ${(idx + 1).toString().padStart(4, "0")}`,
     title: t.title,
     categoryId: t.category,
     categoryName: t.category.toUpperCase(),
     format: "classic",
+    formatLabel: "Standard Format",
     svgDataUri: t.svgDataUri,
     width: t.width,
     height: t.height,
+    aspectRatio: `${t.width}:${t.height}`,
     tags: t.tags || [],
     defaultTopText: t.defaultTopText || "",
     defaultBottomText: t.defaultBottomText || "",
     isWatermarkFree: true,
-    trendingRank: 1,
-    remixCount: t.downloads || 0,
+    trendingRank: idx + 1,
+    remixCount: t.downloads || 1500,
+    downloadCount: t.downloads || 800,
     createdAt: t.createdAt.toISOString(),
   }));
 
-  // Merge: DB templates + static templates that are not overridden by slug/id
-  const dbSlugs = new Set(dbFormatted.map((t) => t.slug));
-  const uniqueStatic = TEMPLATES.filter((t) => !dbSlugs.has(t.slug));
-  let results = [...dbFormatted, ...uniqueStatic];
+  // Fallback to TEMPLATES only if Neon DB is completely empty (never seeded)
+  if (results.length === 0) {
+    results = [...TEMPLATES];
+  }
 
   if (query.category && query.category !== "all") {
     results = results.filter(
@@ -70,7 +76,7 @@ export async function getTemplates(query: TemplateQueryInput) {
     results = results.filter(
       (t) =>
         t.title.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q))
+        t.tags.some((tag: string) => tag.toLowerCase().includes(q))
     );
   }
 
@@ -80,13 +86,6 @@ export async function getTemplates(query: TemplateQueryInput) {
     page: query.page,
     limit: query.limit,
   };
-
-  // 3. Store in Redis Cache
-  try {
-    await redis.set(cacheKey, responseData, { ex: CACHE_TTL_SECONDS });
-  } catch (err) {
-    console.warn("Redis write failed:", err);
-  }
 
   return {
     ...responseData,
@@ -127,14 +126,50 @@ export async function createTemplate(input: CreateTemplateInput, user?: JWTPaylo
 
 export async function deleteTemplate(idOrSlug: string) {
   try {
-    // Attempt deletion by id or slug
     const deleted = await prisma.template.deleteMany({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
       },
     });
+
+    await prisma.auditLog.create({
+      data: {
+        action: "TEMPLATE_DELETED",
+        targetId: idOrSlug,
+        targetType: "TEMPLATE",
+        details: `Deleted template ${idOrSlug}`,
+        actorEmail: "SUPER_ADMIN",
+      },
+    }).catch(() => {});
+
     return { success: true, count: deleted.count };
   } catch (err) {
     throw new Error("Failed to remove template card from database");
+  }
+}
+
+export async function deleteMultipleTemplates(idsOrSlugs: string[]) {
+  try {
+    const deleted = await prisma.template.deleteMany({
+      where: {
+        OR: [
+          { id: { in: idsOrSlugs } },
+          { slug: { in: idsOrSlugs } },
+        ],
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: "TEMPLATES_BULK_DELETED",
+        targetType: "TEMPLATE",
+        details: `Bulk deleted ${deleted.count} templates (${idsOrSlugs.join(", ")})`,
+        actorEmail: "SUPER_ADMIN",
+      },
+    }).catch(() => {});
+
+    return { success: true, count: deleted.count };
+  } catch (err) {
+    throw new Error("Failed to bulk remove templates from database");
   }
 }
