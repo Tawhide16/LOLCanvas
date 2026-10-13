@@ -63,20 +63,18 @@ export default function MemeCard({ template, onPreview, isAdmin, onDelete }: Mem
         </span>
       </div>
 
-      {/* Visual Preview - Full uncropped meme */}
-      <div className="p-3 sm:p-4 flex items-center justify-center bg-white group-hover:bg-[#F6F5EE] transition-colors relative min-h-[240px] sm:min-h-[270px]">
-        <div className="w-full flex items-center justify-center">
-          <img
-            src={template.svgDataUri}
-            alt={template.title}
-            className="w-auto h-auto max-w-full max-h-[250px] sm:max-h-[270px] object-contain border border-black/15 group-hover:border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] group-hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-          />
-        </div>
+      {/* Visual Preview - Full bleed meme (Zero whitespace around) */}
+      <div className="w-full aspect-square relative overflow-hidden bg-black/5 flex items-center justify-center">
+        <img
+          src={template.svgDataUri}
+          alt={template.title}
+          className="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-300"
+        />
 
         {onPreview && (
           <button
             onClick={() => onPreview(template)}
-            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333]"
+            className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
             title="Inspect"
             aria-label="Inspect template"
           >

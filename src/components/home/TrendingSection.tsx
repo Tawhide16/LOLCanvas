@@ -106,15 +106,13 @@ export default function TrendingSection() {
                   </span>
                 </div>
 
-                {/* Template Preview - Full uncropped meme */}
-                <div className="p-3 sm:p-4 flex items-center justify-center bg-white group-hover:bg-[#F6F5EE] transition-colors min-h-[220px]">
-                  <div className="w-full flex items-center justify-center">
-                    <img
-                      src={item.svgDataUri}
-                      alt={item.title}
-                      className="w-auto h-auto max-w-full max-h-[220px] object-contain border border-black/15 group-hover:border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.08)] group-hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-                    />
-                  </div>
+                {/* Template Preview - Full bleed meme (Zero whitespace around) */}
+                <div className="w-full aspect-square relative overflow-hidden bg-black/5 flex items-center justify-center">
+                  <img
+                    src={item.svgDataUri}
+                    alt={item.title}
+                    className="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
 
                 {/* Minimal Title & Direct Remix CTA */}
