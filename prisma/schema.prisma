@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -------------------------------------------------------------
+// USER & CREATOR ACCOUNTS
+// -------------------------------------------------------------
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  name          String?
+  avatarUrl     String?
+  role          String       @default("CREATOR") // CREATOR, CURATOR, ADMIN
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  memes         Meme[]
+  collections   Collection[]
+
+  @@map("users")
+}
+
+// -------------------------------------------------------------
+// MEME TEMPLATES ARCHIVE
+// -------------------------------------------------------------
+model Template {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  title             String
+  category          String   // classic, modern, reaction, relatable, crypto, animals
+  tags              String[] @default([])
+  svgDataUri        String   @db.Text
+  width             Int      @default(1080)
+  height            Int      @default(1080)
+  defaultTopText    String?
+  defaultBottomText String?
+  downloads         Int      @default(0)
+  likes             Int      @default(0)
+  isFeatured        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  memes             Meme[]
+
+  @@index([category])
+  @@index([slug])
+  @@map("templates")
+}
+
+// -------------------------------------------------------------
+// USER GENERATED MEMES & EXPORTS
+// -------------------------------------------------------------
+model Meme {
+  id          String    @id @default(cuid())
+  title       String
+  templateId  String?
+  previewUrl  String?   @db.Text
+  layersJson  Json      // Array of CanvasLayer definitions (text, image overlays, stickers)
+  width       Int       @default(1080)
+  height      Int       @default(1080)
+  isPublic    Boolean   @default(true)
+  authorId    String?
+  downloads   Int       @default(0)
+  likes       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  template    Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  collectionItems CollectionItem[]
+
+  @@index([templateId])
+  @@index([authorId])
+  @@map("memes")
+}
+
+// -------------------------------------------------------------
+// CURATED ARCHIVE COLLECTIONS
+// -------------------------------------------------------------
+model Collection {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  authorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  items       CollectionItem[]
+
+  @@map("collections")
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  memeId       String
+  addedAt      DateTime   @default(now())
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  meme         Meme       @relation(fields: [memeId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, memeId])
+  @@map("collection_items")
+}

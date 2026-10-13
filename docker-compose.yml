@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  # -------------------------------------------------------------
+  # 1. PostgreSQL Database Service
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: lolcanvas-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lolcanvas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lolcanvas_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-lolcanvas_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lolcanvas} -d ${POSTGRES_DB:-lolcanvas_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # 2. Next.js Web Application
+  # -------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lolcanvas-web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-lolcanvas}:${POSTGRES_PASSWORD:-lolcanvas_secret}@postgres:5432/${POSTGRES_DB:-lolcanvas_db}?schema=public
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: lolcanvas_postgres_data

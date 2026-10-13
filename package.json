@@ -1,14 +1,22 @@
 {
-  "name": "temp-app",
-  "version": "0.1.0",
+  "name": "lolcanvas",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "@prisma/adapter-neon": "^7.10.0",
+    "@prisma/client": "^6.19.3",
+    "@supabase/supabase-js": "^2.117.3",
     "framer-motion": "^14.1.0",
     "lucide-react": "^1.55.0",
     "next": "16.4.0",
@@ -22,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
