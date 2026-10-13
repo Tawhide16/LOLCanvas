@@ -410,23 +410,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Super Admin Quick Autofill Option */}
-              {mode === "login" && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail("admin123@gmail.com");
-                      setPassword("admin123");
-                    }}
-                    className="w-full py-1.5 px-2 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors font-mono-code text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] active:translate-y-[1px]"
-                  >
-                    <Crown className="w-3.5 h-3.5 shrink-0" />
-                    <span>FILL SUPER ADMIN (admin123@gmail.com)</span>
-                  </button>
-                </div>
-              )}
-
               <button
                 type="submit"
                 disabled={isSubmitting}
