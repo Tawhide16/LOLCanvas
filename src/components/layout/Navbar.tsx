@@ -13,9 +13,12 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserEmail(session?.user?.email ?? null);
     });
@@ -126,23 +129,21 @@ export default function Navbar() {
         {/* Login / User Status Cell */}
         <Link
           href="/login"
+          suppressHydrationWarning
           className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[12px] tracking-wider text-black group"
-          title={userEmail ? `Signed in as ${userEmail}` : "Sign in to LOLCanvas"}
         >
-          {userEmail ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-[#10B981] mr-1.5 shrink-0 animate-pulse"></span>
-              <span className="hidden sm:inline font-bold uppercase truncate max-w-[120px]">
+          {mounted && userEmail ? (
+            <span suppressHydrationWarning className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0 animate-pulse"></span>
+              <span className="font-bold uppercase truncate max-w-[120px]">
                 {userEmail.split("@")[0]}
               </span>
-              <span className="sm:hidden font-bold">ACC</span>
-            </>
+            </span>
           ) : (
-            <>
-              <User className="w-3.5 h-3.5 mr-1.5 text-[#555555] group-hover:text-black" />
-              <span className="hidden sm:inline">LOGIN</span>
-              <span className="sm:hidden">LOG</span>
-            </>
+            <span suppressHydrationWarning className="flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-[#555555] group-hover:text-black" />
+              <span>LOGIN</span>
+            </span>
           )}
         </Link>
 
