@@ -550,8 +550,26 @@ export default function ProfilePage() {
           </div>
 
           {isMemesLoading ? (
-            <div className="p-16 text-center font-mono-code text-xs text-[#777777] bg-white border border-black">
-              FETCHING YOUR MEMES FROM NEON DB...
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between select-none"
+                >
+                  <div className="aspect-[16/10] bg-[#FAF9F5] border border-black/15 animate-shimmer flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-black/20 border-t-black animate-spin" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3.5 w-3/4 bg-black/15 animate-pulse" />
+                    <div className="h-3 w-1/2 bg-black/10 animate-pulse" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-black/10">
+                    <div className="h-7 bg-black animate-pulse" />
+                    <div className="h-7 bg-[#FAF9F5] border border-black animate-pulse" />
+                    <div className="h-7 bg-[#FFF1F2] border border-[#E11D48]/30 animate-pulse" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : memes.length === 0 ? (
             <div className="p-16 text-center font-mono-code text-xs bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4">

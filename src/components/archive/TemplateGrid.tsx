@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle, Edit3, Lock } from "lucide-react";
 import FilterBar from "./FilterBar";
 import MemeCard from "./MemeCard";
+import MemeCardSkeleton from "./MemeCardSkeleton";
 import { TEMPLATES } from "@/lib/data";
 import { Template } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -489,12 +490,7 @@ export default function TemplateGrid({
 
       {/* Connected Grid (4 cols desktop, 2 cols tablet, 1 col mobile) */}
       {isLoadingTemplates ? (
-        <div className="p-16 text-center border-b border-black font-mono-code space-y-3 bg-white">
-          <div className="w-6 h-6 border-2 border-black border-t-[#E11D48] rounded-full animate-spin mx-auto"></div>
-          <p className="text-xs font-bold uppercase text-black">
-            LOADING TEMPLATE ARCHIVE...
-          </p>
-        </div>
+        <MemeCardSkeleton count={8} />
       ) : filteredTemplates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-l border-t border-black bg-[#FAF9F5]">
           {filteredTemplates.map((template) => (
