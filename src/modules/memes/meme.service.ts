@@ -148,3 +148,55 @@ export async function deleteMeme(id: string, user: JWTPayload) {
 
   return { id, deleted: true };
 }
+
+export async function updateMeme(
+  id: string,
+  input: { title?: string; previewUrl?: string; layers?: any; isPublic?: boolean },
+  requesterEmail?: string | null,
+  userId?: string | null
+) {
+  const meme = await prisma.meme.findUnique({
+    where: { id },
+    include: { author: true },
+  });
+
+  if (!meme) {
+    throw new Error("Meme not found");
+  }
+
+  // Check ownership: strictly only the author can edit their own meme
+  const authorEmail = meme.author?.email?.toLowerCase().trim();
+  const reqEmail = requesterEmail?.toLowerCase().trim();
+  const isOwner =
+    (authorEmail && reqEmail && authorEmail === reqEmail) ||
+    (userId && meme.authorId === userId);
+
+  if (!isOwner) {
+    throw new Error(
+      "FORBIDDEN: You can only edit memes you uploaded. Admins have power to delete cards, but cannot edit memes created by others."
+    );
+  }
+
+  const updated = await prisma.meme.update({
+    where: { id },
+    data: {
+      ...(input.title ? { title: input.title.trim().toUpperCase() } : {}),
+      ...(input.previewUrl ? { previewUrl: input.previewUrl } : {}),
+      ...(input.layers ? { layersJson: input.layers as unknown as object } : {}),
+      ...(typeof input.isPublic === "boolean" ? { isPublic: input.isPublic } : {}),
+    },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  return updated;
+}
+

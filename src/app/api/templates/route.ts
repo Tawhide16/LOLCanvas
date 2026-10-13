@@ -46,7 +46,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = createTemplateSchema.parse(body);
 
-    const template = await createTemplate(validatedData, authUser || undefined);
+    const authorEmail = body.authorEmail || authUser?.email || undefined;
+    const template = await createTemplate(
+      { ...validatedData, authorEmail },
+      authUser || undefined
+    );
 
     return successResponse(template, "Template created successfully", 201);
   } catch (err: unknown) {
@@ -55,6 +59,32 @@ export async function POST(req: NextRequest) {
     }
     const message = err instanceof Error ? err.message : "Failed to create template";
     return errorResponse(message, 400);
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, title, category, svgDataUri, authorEmail } = body;
+
+    if (!id) {
+      return errorResponse("Template ID is required", 400);
+    }
+
+    const { updateTemplate } = await import("@/modules/templates/template.service");
+    const updated = await updateTemplate({
+      id,
+      title,
+      category,
+      svgDataUri,
+      authorEmail,
+    });
+
+    return successResponse(updated, "Template card updated successfully");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update template";
+    const status = message.includes("Permission denied") ? 403 : 400;
+    return errorResponse(message, status);
   }
 }
 

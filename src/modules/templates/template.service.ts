@@ -35,28 +35,34 @@ export async function getTemplates(query: TemplateQueryInput) {
   }
 
   // Format DB templates
-  let results: any[] = dbTemplates.map((t, idx) => ({
-    id: t.id,
-    slug: t.slug,
-    index: `№ ${(idx + 1).toString().padStart(4, "0")}`,
-    title: t.title,
-    categoryId: t.category,
-    categoryName: t.category.toUpperCase(),
-    format: "classic",
-    formatLabel: "Standard Format",
-    svgDataUri: t.svgDataUri,
-    width: t.width,
-    height: t.height,
-    aspectRatio: `${t.width}:${t.height}`,
-    tags: t.tags || [],
-    defaultTopText: t.defaultTopText || "",
-    defaultBottomText: t.defaultBottomText || "",
-    isWatermarkFree: true,
-    trendingRank: idx + 1,
-    remixCount: t.downloads || 1500,
-    downloadCount: t.downloads || 800,
-    createdAt: t.createdAt.toISOString(),
-  }));
+  let results: any[] = dbTemplates.map((t, idx) => {
+    const authorTag = (t.tags || []).find((tag: string) => tag.startsWith("author:"));
+    const authorEmail = authorTag ? authorTag.replace("author:", "") : null;
+
+    return {
+      id: t.id,
+      slug: t.slug,
+      index: `№ ${(idx + 1).toString().padStart(4, "0")}`,
+      title: t.title,
+      categoryId: t.category,
+      categoryName: t.category.toUpperCase(),
+      format: "classic",
+      formatLabel: "Standard Format",
+      svgDataUri: t.svgDataUri,
+      width: t.width,
+      height: t.height,
+      aspectRatio: `${t.width}:${t.height}`,
+      tags: t.tags || [],
+      defaultTopText: t.defaultTopText || "",
+      defaultBottomText: t.defaultBottomText || "",
+      isWatermarkFree: true,
+      trendingRank: idx + 1,
+      remixCount: t.downloads || 1500,
+      downloadCount: t.downloads || 800,
+      createdAt: t.createdAt.toISOString(),
+      authorEmail: authorEmail,
+    };
+  });
 
   if (query.category && query.category !== "all") {
     results = results.filter(
@@ -88,15 +94,24 @@ export async function getTemplates(query: TemplateQueryInput) {
   };
 }
 
-export async function createTemplate(input: CreateTemplateInput, user?: JWTPayload) {
+export async function createTemplate(
+  input: CreateTemplateInput & { authorEmail?: string },
+  user?: JWTPayload
+) {
   const slug = input.slug || input.title.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
+  const creatorEmail = input.authorEmail || user?.email || "anonymous@lolcanvas.studio";
+
+  const tags = [...(input.tags || [])];
+  if (!tags.some((t) => t.startsWith("author:"))) {
+    tags.push(`author:${creatorEmail.toLowerCase()}`);
+  }
 
   const template = await prisma.template.upsert({
     where: { slug },
     update: {
       title: input.title,
       category: input.category,
-      tags: input.tags,
+      tags: tags,
       svgDataUri: input.svgDataUri,
       width: input.width || 1080,
       height: input.height || 1080,
@@ -107,7 +122,7 @@ export async function createTemplate(input: CreateTemplateInput, user?: JWTPaylo
       slug,
       title: input.title,
       category: input.category,
-      tags: input.tags,
+      tags: tags,
       svgDataUri: input.svgDataUri,
       width: input.width || 1080,
       height: input.height || 1080,
@@ -117,6 +132,47 @@ export async function createTemplate(input: CreateTemplateInput, user?: JWTPaylo
   });
 
   return template;
+}
+
+export async function updateTemplate(input: {
+  id: string;
+  title?: string;
+  category?: string;
+  svgDataUri?: string;
+  authorEmail?: string;
+}) {
+  const existing = await prisma.template.findFirst({
+    where: {
+      OR: [{ id: input.id }, { slug: input.id }],
+    },
+  });
+
+  if (!existing) {
+    throw new Error("Template card not found");
+  }
+
+  const authorTag = (existing.tags || []).find((t: string) => t.startsWith("author:"));
+  const cardOwner = authorTag ? authorTag.replace("author:", "").toLowerCase().trim() : null;
+  const requesterEmail = input.authorEmail ? input.authorEmail.toLowerCase().trim() : null;
+
+  // STRICT POLICY ENFORCEMENT:
+  // "each specific person can edit only their uploaded meme card, and admin have a power he can only deleted that card but cannot edit it"
+  if (cardOwner && (!requesterEmail || requesterEmail !== cardOwner)) {
+    throw new Error(
+      `Permission denied: Only the original creator (${cardOwner}) can edit this card. Admins are authorized to delete cards, but cannot edit cards created by others.`
+    );
+  }
+
+  const updated = await prisma.template.update({
+    where: { id: existing.id },
+    data: {
+      ...(input.title ? { title: input.title.trim().toUpperCase() } : {}),
+      ...(input.category ? { category: input.category } : {}),
+      ...(input.svgDataUri ? { svgDataUri: input.svgDataUri } : {}),
+    },
+  });
+
+  return updated;
 }
 
 export async function deleteTemplate(idOrSlug: string) {

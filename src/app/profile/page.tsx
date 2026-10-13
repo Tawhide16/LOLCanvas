@@ -18,6 +18,8 @@ import {
   Layers,
   Heart,
   Plus,
+  Edit3,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -45,6 +47,12 @@ export default function ProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit meme modal state
+  const [editingMeme, setEditingMeme] = useState<UserMeme | null>(null);
+  const [editMemeTitle, setEditMemeTitle] = useState("");
+  const [isUpdatingMeme, setIsUpdatingMeme] = useState(false);
+
 
   // 1. Load Session
   useEffect(() => {
@@ -126,6 +134,7 @@ export default function ProfilePage() {
     setUploadSuccess(null);
 
     try {
+      // A. Save to user memes repository
       const res = await fetch("/api/memes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,8 +156,25 @@ export default function ProfilePage() {
         }),
       });
 
+      // B. Also publish as a website template card tagged with user's author email
+      const slug = uploadTitle.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
+      await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: uploadTitle.trim().toUpperCase(),
+          slug,
+          category: uploadCategory,
+          svgDataUri: uploadPreview,
+          tags: [uploadCategory, "user_upload", `author:${user.email.toLowerCase().trim()}`],
+          authorEmail: user.email,
+          width: 1080,
+          height: 1080,
+        }),
+      }).catch((err) => console.warn("Failed to mirror to template archive:", err));
+
       if (res.ok) {
-        setUploadSuccess("Meme successfully published to community and saved to your profile!");
+        setUploadSuccess("Meme successfully published to community archive and saved to your profile!");
         setUploadFile(null);
         setUploadPreview(null);
         setUploadTitle("");
@@ -162,6 +188,48 @@ export default function ProfilePage() {
       setIsUploading(false);
     }
   };
+
+  // Creator: Open Edit Meme Modal
+  const openEditMemeModal = (meme: UserMeme) => {
+    setEditingMeme(meme);
+    setEditMemeTitle(meme.title);
+  };
+
+  // Creator: Execute Meme Title/Info Edit
+  const handleSaveMemeEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMeme || !editMemeTitle.trim() || !user) return;
+
+    setIsUpdatingMeme(true);
+    try {
+      const res = await fetch("/api/memes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingMeme.id,
+          title: editMemeTitle.trim().toUpperCase(),
+          authorEmail: user.email,
+        }),
+      });
+
+      if (res.ok) {
+        setMemes((prev) =>
+          prev.map((m) =>
+            m.id === editingMeme.id ? { ...m, title: editMemeTitle.trim().toUpperCase() } : m
+          )
+        );
+        setEditingMeme(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to update meme: ${data.message || "Permission denied"}`);
+      }
+    } catch (err) {
+      alert("Network error updating meme.");
+    } finally {
+      setIsUpdatingMeme(false);
+    }
+  };
+
 
   // 5. Delete Meme
   const handleDeleteMeme = async (id: string, title: string) => {
@@ -524,14 +592,15 @@ export default function ProfilePage() {
 
                   {/* Actions */}
                   <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
-                    <Link
-                      href={m.templateId ? `/edit/${m.templateId}` : `/editor`}
+                    <button
+                      type="button"
+                      onClick={() => openEditMemeModal(m)}
                       className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
-                      title="Open in Canvas to remix"
+                      title="Edit meme details"
                     >
-                      <Wand2 className="w-3 h-3 text-[#E11D48]" />
+                      <Edit3 className="w-3 h-3 text-[#10B981]" />
                       <span>EDIT</span>
-                    </Link>
+                    </button>
 
                     <button
                       onClick={() => handleDownload(m.previewUrl || "", m.title)}
@@ -557,6 +626,92 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Edit Meme Modal */}
+      {editingMeme && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F5] border-2 border-black w-full max-w-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black px-4 py-3 bg-[#E6E4DC] font-mono-code text-xs">
+              <div className="flex items-center gap-2 font-bold uppercase text-black">
+                <Edit3 className="w-4 h-4 text-[#10B981]" />
+                <span>EDIT SAVED MEME</span>
+              </div>
+              <button
+                onClick={() => setEditingMeme(null)}
+                disabled={isUpdatingMeme}
+                className="p-1 hover:bg-black hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveMemeEdit} className="p-6 space-y-4 font-mono-code text-xs">
+              <div className="space-y-3">
+                {editingMeme.previewUrl && (
+                  <div className="w-full aspect-video border border-black bg-white flex items-center justify-center p-2">
+                    <img
+                      src={editingMeme.previewUrl}
+                      alt={editingMeme.title}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[10px] text-[#777777] uppercase font-bold block mb-1">
+                    MEME TITLE / CAPTION *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editMemeTitle}
+                    onChange={(e) => setEditMemeTitle(e.target.value)}
+                    placeholder="ENTER MEME TITLE"
+                    className="w-full p-2.5 bg-white border border-black font-bold uppercase text-xs focus:outline-none"
+                  />
+                </div>
+
+                <div className="p-2.5 bg-[#FAF9F5] border border-black/20 text-[11px] text-[#555555]">
+                  Only you ({user?.email}) have permission to edit this meme.
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="border-t border-black pt-4 flex items-center justify-between">
+                <Link
+                  href={editingMeme.templateId ? `/edit/${editingMeme.templateId}` : `/editor`}
+                  className="px-3 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold text-[10px] flex items-center gap-1"
+                >
+                  <Wand2 className="w-3 h-3 text-[#E11D48]" />
+                  <span>CANVAS EDITOR</span>
+                </Link>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMeme(null)}
+                    disabled={isUpdatingMeme}
+                    className="px-4 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold transition-colors disabled:opacity-50"
+                  >
+                    CANCEL
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isUpdatingMeme || !editMemeTitle.trim()}
+                    className="px-5 py-2 bg-black text-white hover:bg-[#222222] uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(16,185,129,1)] flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-[#10B981]" />
+                    <span>{isUpdatingMeme ? "SAVING..." : "SAVE ■"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

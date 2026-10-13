@@ -84,3 +84,36 @@ export async function DELETE(req: NextRequest) {
     return errorResponse(message, 400);
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, title, previewUrl, layers, isPublic, authorEmail } = body;
+
+    if (!id) {
+      return errorResponse("Meme ID is required", 400);
+    }
+
+    const authUser = await authenticateRequest(req);
+    const requesterEmail = authorEmail || authUser?.email || null;
+    const userId = authUser?.userId || null;
+
+    const { updateMeme } = await import("@/modules/memes/meme.service");
+    const updated = await updateMeme(
+      id,
+      { title, previewUrl, layers, isPublic },
+      requesterEmail,
+      userId
+    );
+
+    return successResponse(updated, "Meme updated successfully");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update meme";
+    const status =
+      message.includes("FORBIDDEN") || message.includes("Permission denied")
+        ? 403
+        : 400;
+    return errorResponse(message, status);
+  }
+}
+

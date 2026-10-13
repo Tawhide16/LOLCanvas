@@ -33,6 +33,7 @@ export interface Template {
   tags: string[];
   trendingRank?: number;
   isWatermarkFree?: boolean;
+  authorEmail?: string | null;
 }
 
 export interface CanvasLayer {

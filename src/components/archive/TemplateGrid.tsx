@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle } from "lucide-react";
+import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle, Edit3, Lock } from "lucide-react";
 import FilterBar from "./FilterBar";
 import MemeCard from "./MemeCard";
 import { TEMPLATES } from "@/lib/data";
@@ -26,11 +26,20 @@ export default function TemplateGrid({
   // Dynamic template archive state
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
   // Delete card popup modal state
   const [cardToDelete, setCardToDelete] = useState<Template | null>(null);
   const [isDeletingCard, setIsDeletingCard] = useState(false);
+
+  // Edit card modal state (Only creator can edit their card; admin cannot edit)
+  const [cardToEdit, setCardToEdit] = useState<Template | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("classic");
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Admin upload card modal
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -40,9 +49,8 @@ export default function TemplateGrid({
   const [isUploadingCard, setIsUploadingCard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check admin status and load live templates
+  // Check user session & admin status and load live templates
   useEffect(() => {
-    // 1. Check admin status
     const evaluateAdmin = (email: string | null, role?: string | null) => {
       if (!email) return false;
       if (email.toLowerCase() === "admin123@gmail.com") return true;
@@ -50,8 +58,10 @@ export default function TemplateGrid({
       return false;
     };
 
+    // Check Supabase session & local fallback
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email);
         const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
         setIsAdmin(evaluateAdmin(session.user.email, role));
       } else if (typeof window !== "undefined") {
@@ -59,11 +69,21 @@ export default function TemplateGrid({
           const local = localStorage.getItem("lolcanvas_user");
           if (local) {
             const parsed = JSON.parse(local);
+            if (parsed.email) setCurrentUserEmail(parsed.email);
             setIsAdmin(evaluateAdmin(parsed.email, parsed.role));
           }
         } catch (e) {}
       }
     });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email);
+        const role = session.user.app_metadata?.role || session.user.user_metadata?.role;
+        setIsAdmin(evaluateAdmin(session.user.email, role));
+      }
+    });
+
 
     // 2. Fetch live templates from DB
     async function loadTemplates() {
@@ -148,7 +168,7 @@ export default function TemplateGrid({
     }
   };
 
-  // Super Admin: Upload new template card
+  // Super Admin / Creator: Upload new template card
   const handleAdminUploadCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newImagePreview || !newTitle.trim()) return;
@@ -156,6 +176,7 @@ export default function TemplateGrid({
     setIsUploadingCard(true);
     try {
       const slug = newTitle.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
+      const creatorEmail = currentUserEmail || "admin123@gmail.com";
       const res = await fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,7 +185,8 @@ export default function TemplateGrid({
           slug,
           category: newCategory,
           svgDataUri: newImagePreview,
-          tags: [newCategory, "custom", "superadmin"],
+          tags: [newCategory, "custom", "superadmin", `author:${creatorEmail}`],
+          authorEmail: creatorEmail,
           width: 1080,
           height: 1080,
         }),
@@ -186,7 +208,7 @@ export default function TemplateGrid({
           aspectRatio: "1:1",
           source: "SUPER ADMIN UPLOAD",
           license: "PUBLIC DOMAIN (CC0)",
-          tags: [newCategory, "custom"],
+          tags: [newCategory, "custom", `author:${creatorEmail}`],
           defaultTopText: "",
           defaultBottomText: "",
           isWatermarkFree: true,
@@ -194,6 +216,7 @@ export default function TemplateGrid({
           remixCount: 1200,
           downloadCount: 800,
           createdAt: new Date().toISOString(),
+          authorEmail: creatorEmail,
         };
 
         setTemplates((prev) => [newCard, ...prev]);
@@ -209,6 +232,65 @@ export default function TemplateGrid({
       setIsUploadingCard(false);
     }
   };
+
+  // Creator: Open Edit Card Modal
+  const openEditModal = (template: Template) => {
+    setCardToEdit(template);
+    setEditTitle(template.title);
+    setEditCategory(template.categoryId || "classic");
+    setEditImagePreview(template.svgDataUri);
+  };
+
+  // Creator: Execute Card Update (strictly checks that requester is creator)
+  const handleSaveCardEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cardToEdit || !editTitle.trim()) return;
+
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch("/api/templates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: cardToEdit.id || cardToEdit.slug,
+          title: editTitle.trim().toUpperCase(),
+          category: editCategory,
+          svgDataUri: editImagePreview,
+          authorEmail: currentUserEmail,
+        }),
+      });
+
+      if (res.ok) {
+        setTemplates((prev) =>
+          prev.map((t) => {
+            if (t.id === cardToEdit.id || t.slug === cardToEdit.slug) {
+              return {
+                ...t,
+                title: editTitle.trim().toUpperCase(),
+                categoryId: editCategory,
+                categoryName: editCategory.toUpperCase(),
+                svgDataUri: editImagePreview || t.svgDataUri,
+              };
+            }
+            return t;
+          })
+        );
+        setCardToEdit(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(
+          `Failed to save edit: ${
+            data.message || "Permission denied. Admins can delete cards, but cannot edit cards created by others."
+          }`
+        );
+      }
+    } catch (err) {
+      alert("Network error updating template card.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
 
   // Filter and sort items
   const filteredTemplates = useMemo(() => {
@@ -371,7 +453,9 @@ export default function TemplateGrid({
               key={template.id}
               template={template}
               isAdmin={isAdmin}
+              currentUserEmail={currentUserEmail}
               onDelete={handleAdminDeleteCard}
+              onEdit={openEditModal}
               onPreview={setActivePreviewTemplate}
             />
           ))}
@@ -581,6 +665,140 @@ export default function TemplateGrid({
                 <span>{isDeletingCard ? "DELETING..." : "YES, DELETE CARD ■"}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Creator Edit Card Modal (Strictly for original author; admins cannot edit) */}
+      {cardToEdit && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FAF9F5] border-2 border-black w-full max-w-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-black px-4 py-3 bg-[#E6E4DC] font-mono-code text-xs">
+              <div className="flex items-center gap-2 font-bold uppercase text-black">
+                <Edit3 className="w-4 h-4 text-[#10B981]" />
+                <span>EDIT MEME CARD // {cardToEdit.index || "ARCHIVE"}</span>
+              </div>
+              <button
+                onClick={() => setCardToEdit(null)}
+                disabled={isSavingEdit}
+                className="p-1 hover:bg-black hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Verification Banner */}
+            <div className="bg-[#DCFCE7] border-b border-[#16A34A]/30 px-4 py-2 font-mono-code text-[11px] text-[#15803D] flex items-center justify-between font-bold">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                CREATOR OWNERSHIP VERIFIED
+              </span>
+              <span className="text-[10px] text-[#166534]">
+                {cardToEdit.authorEmail || currentUserEmail || "ORIGINAL AUTHOR"}
+              </span>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveCardEdit} className="p-6 space-y-4 font-mono-code text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Image Preview & Replacement */}
+                <div>
+                  <label className="text-[10px] text-[#777777] uppercase font-bold block mb-1">
+                    CARD IMAGE PREVIEW
+                  </label>
+                  <div className="w-full aspect-square border border-black bg-white flex items-center justify-center overflow-hidden p-1 relative group">
+                    {editImagePreview ? (
+                      <img
+                        src={editImagePreview}
+                        alt="Card Preview"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-[#777777]">NO IMAGE</span>
+                    )}
+                  </div>
+                  <input
+                    ref={editFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setEditImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full mt-2 text-[10px] file:mr-2 file:py-1 file:px-2 file:border file:border-black file:text-[10px] file:bg-white file:font-bold file:cursor-pointer"
+                  />
+                </div>
+
+                {/* Card Fields */}
+                <div className="space-y-3 flex flex-col justify-between">
+                  <div>
+                    <label className="text-[10px] text-[#777777] uppercase font-bold block mb-1">
+                      CARD TITLE *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="CARD TITLE"
+                      className="w-full p-2.5 bg-white border border-black font-bold uppercase text-xs focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#777777] uppercase font-bold block mb-1">
+                      CATEGORY *
+                    </label>
+                    <select
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-black font-bold uppercase text-xs focus:outline-none"
+                    >
+                      <option value="classic">CLASSIC FORMATS</option>
+                      <option value="reaction">REACTION & SHOCK</option>
+                      <option value="relatable">WORK & EVERYDAY</option>
+                      <option value="modern">BRAINROT & SURREAL</option>
+                      <option value="crypto">FINANCE & CRYPTO</option>
+                      <option value="animals">ANIMALS & CHAOS</option>
+                    </select>
+                  </div>
+
+                  <div className="p-2.5 bg-[#FAF9F5] border border-black/20 text-[11px] text-[#555555]">
+                    <span className="font-bold text-black block mb-0.5 uppercase text-[10px]">
+                      OWNERSHIP POLICY:
+                    </span>
+                    Only you (the original author) can modify this card. Admins have power to remove inappropriate cards from the website, but cannot edit your creations.
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="border-t border-black pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCardToEdit(null)}
+                  disabled={isSavingEdit}
+                  className="px-4 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold transition-colors disabled:opacity-50"
+                >
+                  CANCEL
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingEdit || !editTitle.trim()}
+                  className="px-6 py-2 bg-black text-white hover:bg-[#222222] uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(16,185,129,1)] flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-[#10B981]" />
+                  <span>{isSavingEdit ? "SAVING..." : "SAVE CARD CHANGES ■"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
