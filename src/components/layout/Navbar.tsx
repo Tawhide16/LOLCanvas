@@ -1,16 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, Menu, X, Plus, User, Palette } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,13 +123,27 @@ export default function Navbar() {
           <span className="sm:hidden">+</span>
         </Link>
 
-        {/* Login Cell */}
+        {/* Login / User Status Cell */}
         <Link
           href="/login"
-          className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[12px] tracking-wider text-black"
+          className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[12px] tracking-wider text-black group"
+          title={userEmail ? `Signed in as ${userEmail}` : "Sign in to LOLCanvas"}
         >
-          <User className="w-3.5 h-3.5 mr-1.5 text-[#555555]" />
-          <span className="hidden sm:inline">LOGIN</span>
+          {userEmail ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-[#10B981] mr-1.5 shrink-0 animate-pulse"></span>
+              <span className="hidden sm:inline font-bold uppercase truncate max-w-[120px]">
+                {userEmail.split("@")[0]}
+              </span>
+              <span className="sm:hidden font-bold">ACC</span>
+            </>
+          ) : (
+            <>
+              <User className="w-3.5 h-3.5 mr-1.5 text-[#555555] group-hover:text-black" />
+              <span className="hidden sm:inline">LOGIN</span>
+              <span className="sm:hidden">LOG</span>
+            </>
+          )}
         </Link>
 
         {/* Mobile Menu Toggle */}
