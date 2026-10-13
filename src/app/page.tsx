@@ -4,9 +4,8 @@ import CollectionSection from "@/components/home/CollectionSection";
 import TemplateGrid from "@/components/archive/TemplateGrid";
 import SubmissionCallout from "@/components/home/SubmissionCallout";
 import { getTemplates } from "@/modules/templates/template.service";
-
-export default async function Home() {
-  let initialTemplates: any[] = [];
+async function getCachedTemplates() {
+  "use cache";
   try {
     const res = await getTemplates({
       category: "all",
@@ -14,12 +13,15 @@ export default async function Home() {
       page: 1,
       limit: 60,
     });
-    if (res?.templates && Array.isArray(res.templates)) {
-      initialTemplates = res.templates;
-    }
+    return res?.templates || [];
   } catch (err) {
     console.warn("Could not pre-fetch templates for Home SSR:", err);
+    return [];
   }
+}
+
+export default async function Home() {
+  const initialTemplates = await getCachedTemplates();
 
   return (
     <div suppressHydrationWarning className="flex flex-col w-full">
