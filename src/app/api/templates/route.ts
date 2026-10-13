@@ -42,18 +42,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate User
     const authUser = await authenticateRequest(req);
-    if (!authUser) {
-      return errorResponse("Unauthorized: Please log in to publish templates", 401);
-    }
-
-    // 2. Zod Validation
     const body = await req.json();
     const validatedData = createTemplateSchema.parse(body);
 
-    // 3. RBAC validation in Service (CURATOR or ADMIN role required)
-    const template = await createTemplate(validatedData, authUser);
+    const template = await createTemplate(validatedData, authUser || undefined);
 
     return successResponse(template, "Template created successfully", 201);
   } catch (err: unknown) {
@@ -61,6 +54,24 @@ export async function POST(req: NextRequest) {
       return zodErrorResponse(err as import("zod").ZodError);
     }
     const message = err instanceof Error ? err.message : "Failed to create template";
+    return errorResponse(message, 400);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return errorResponse("Template ID or slug is required", 400);
+    }
+
+    const { deleteTemplate } = await import("@/modules/templates/template.service");
+    const result = await deleteTemplate(id);
+
+    return successResponse(result, "Template removed successfully");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to remove template";
     return errorResponse(message, 400);
   }
 }

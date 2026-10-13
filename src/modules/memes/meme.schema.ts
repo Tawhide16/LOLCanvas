@@ -44,23 +44,21 @@ export const createMemeSchema = z.object({
     .max(120, "Title is too long")
     .trim(),
   templateId: z.string().optional(),
-  previewUrl: z
-    .string()
-    .url()
-    .or(z.string().startsWith("data:image/"))
-    .optional(),
+  previewUrl: z.string().optional(),
   layers: z
     .array(canvasLayerSchema)
-    .min(1, "At least one layer is required on the canvas"),
+    .default([]),
   width: z.number().int().min(100).max(8000).default(1080),
   height: z.number().int().min(100).max(8000).default(1080),
   isPublic: z.boolean().default(true),
+  authorEmail: z.string().email().optional(),
 });
 
 export const getMemesQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(30),
   authorId: z.string().optional(),
+  authorEmail: z.string().optional(),
 });
 
 export type CreateMemeInput = z.infer<typeof createMemeSchema>;

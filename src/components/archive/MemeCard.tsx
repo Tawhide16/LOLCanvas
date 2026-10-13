@@ -1,16 +1,16 @@
-"use client";
-
 import { useState } from "react";
 import Link from "next/link";
-import { Download, Edit3, Eye, Check } from "lucide-react";
+import { Download, Edit3, Eye, Check, Trash2 } from "lucide-react";
 import { Template } from "@/types";
 
 interface MemeCardProps {
   template: Template;
   onPreview?: (template: Template) => void;
+  isAdmin?: boolean;
+  onDelete?: (id: string, title: string) => void;
 }
 
-export default function MemeCard({ template, onPreview }: MemeCardProps) {
+export default function MemeCard({ template, onPreview, isAdmin, onDelete }: MemeCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
@@ -127,6 +127,23 @@ export default function MemeCard({ template, onPreview }: MemeCardProps) {
             )}
           </button>
         </div>
+
+        {/* Super Admin Single-Click Card Removal */}
+        {isAdmin && onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(template.id || template.slug, template.title);
+            }}
+            className="w-full py-1 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white font-mono-code text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
+            title="Super Admin: Delete this card from the website"
+          >
+            <Trash2 className="w-3 h-3" />
+            <span>REMOVE CARD ✕</span>
+          </button>
+        )}
       </div>
     </article>
   );

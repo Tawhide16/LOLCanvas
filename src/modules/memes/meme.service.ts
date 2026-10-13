@@ -4,22 +4,41 @@ import { JWTPayload } from "../auth/auth.jwt";
 import { hasPermission } from "../auth/auth.rbac";
 
 export async function createMeme(input: CreateMemeInput, authorId?: string) {
+  let finalAuthorId = authorId;
+
+  if (!finalAuthorId && input.authorEmail) {
+    let user = await prisma.user.findUnique({
+      where: { email: input.authorEmail.toLowerCase().trim() },
+    });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: input.authorEmail.toLowerCase().trim(),
+          name: input.authorEmail.split("@")[0],
+          role: "CREATOR",
+        },
+      });
+    }
+    finalAuthorId = user.id;
+  }
+
   const meme = await prisma.meme.create({
     data: {
       title: input.title,
       templateId: input.templateId || null,
       previewUrl: input.previewUrl || null,
-      layersJson: input.layers as unknown as object,
-      width: input.width,
-      height: input.height,
+      layersJson: (input.layers || []) as unknown as object,
+      width: input.width || 1080,
+      height: input.height || 1080,
       isPublic: input.isPublic,
-      authorId: authorId || null,
+      authorId: finalAuthorId || null,
     },
     include: {
       author: {
         select: {
           id: true,
           name: true,
+          email: true,
           avatarUrl: true,
         },
       },
@@ -32,12 +51,29 @@ export async function createMeme(input: CreateMemeInput, authorId?: string) {
 export async function getMemes(query: GetMemesQueryInput) {
   const skip = (query.page - 1) * query.limit;
 
+  let authorFilterId = query.authorId;
+  if (!authorFilterId && query.authorEmail) {
+    const user = await prisma.user.findUnique({
+      where: { email: query.authorEmail.toLowerCase().trim() },
+    });
+    if (user) {
+      authorFilterId = user.id;
+    } else {
+      // No user found with this email, return empty
+      return {
+        memes: [],
+        pagination: { total: 0, page: query.page, limit: query.limit, totalPages: 0 },
+      };
+    }
+  }
+
+  const whereClause: any = {
+    ...(authorFilterId ? { authorId: authorFilterId } : { isPublic: true }),
+  };
+
   const [memes, total] = await Promise.all([
     prisma.meme.findMany({
-      where: {
-        isPublic: true,
-        ...(query.authorId ? { authorId: query.authorId } : {}),
-      },
+      where: whereClause,
       skip,
       take: query.limit,
       orderBy: { createdAt: "desc" },
@@ -46,16 +82,14 @@ export async function getMemes(query: GetMemesQueryInput) {
           select: {
             id: true,
             name: true,
+            email: true,
             avatarUrl: true,
           },
         },
       },
     }),
     prisma.meme.count({
-      where: {
-        isPublic: true,
-        ...(query.authorId ? { authorId: query.authorId } : {}),
-      },
+      where: whereClause,
     }),
   ]);
 

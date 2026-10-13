@@ -141,6 +141,8 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
   // Export states
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -442,6 +444,56 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
     }, 100);
   };
 
+  // Upload & Save to Community Profile
+  const handleUploadToCommunity = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    setSelectedLayerId(null);
+    setIsPublishing(true);
+    setPublishSuccess(null);
+
+    setTimeout(async () => {
+      try {
+        const dataUrl = canvas.toDataURL("image/png", 0.95);
+
+        let authorEmail = "creator@lolcanvas.studio";
+        try {
+          const local = localStorage.getItem("lolcanvas_user");
+          if (local) {
+            const parsed = JSON.parse(local);
+            if (parsed.email) authorEmail = parsed.email;
+          }
+        } catch (e) {}
+
+        const res = await fetch("/api/memes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: activePresetName.toUpperCase(),
+            previewUrl: dataUrl,
+            layers: layers,
+            width: canvasWidth,
+            height: canvasHeight,
+            isPublic: true,
+            authorEmail: authorEmail,
+          }),
+        });
+
+        if (res.ok) {
+          setPublishSuccess("SAVED TO PROFILE!");
+          setTimeout(() => setPublishSuccess(null), 3500);
+        } else {
+          alert("Failed to save meme. Please try again.");
+        }
+      } catch (err) {
+        console.error("Meme save error:", err);
+      } finally {
+        setIsPublishing(false);
+      }
+    }, 120);
+  };
+
   // Exit Editor
   const handleExitClick = () => {
     if (hasUnsavedChanges) {
@@ -564,19 +616,41 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
             )}
           </button>
 
+          {/* 1. DOWNLOAD PNG (Watermark-free) */}
           <button
             onClick={handleExportPNG}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(225,29,72,1)]"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white border border-black text-black hover:bg-[#F6F5EE] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs"
+            title="Download watermark-free PNG"
           >
             {downloadSuccess ? (
               <>
                 <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                <span>EXPORTED!</span>
+                <span className="text-[#10B981]">DOWNLOADED!</span>
               </>
             ) : (
               <>
-                <Download className="w-3.5 h-3.5 text-white" />
-                <span>EXPORT PNG</span>
+                <Download className="w-3.5 h-3.5 text-black" />
+                <span>DOWNLOAD PNG</span>
+              </>
+            )}
+          </button>
+
+          {/* 2. UPLOAD & SAVE TO COMMUNITY / PROFILE */}
+          <button
+            onClick={handleUploadToCommunity}
+            disabled={isPublishing}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] disabled:opacity-50 text-xs"
+            title="Upload and save to your profile & community archive"
+          >
+            {publishSuccess ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                <span className="text-[#10B981]">SAVED!</span>
+              </>
+            ) : (
+              <>
+                <UploadCloud className="w-3.5 h-3.5 text-[#E11D48]" />
+                <span>{isPublishing ? "SAVING..." : "UPLOAD & SAVE"}</span>
               </>
             )}
           </button>

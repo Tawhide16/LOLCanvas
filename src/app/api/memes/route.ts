@@ -18,8 +18,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const queryParams = {
       page: searchParams.get("page") || 1,
-      limit: searchParams.get("limit") || 20,
+      limit: searchParams.get("limit") || 50,
       authorId: searchParams.get("authorId") || undefined,
+      authorEmail: searchParams.get("authorEmail") || searchParams.get("email") || undefined,
     };
 
     const validatedQuery = getMemesQuerySchema.parse(queryParams);
@@ -37,9 +38,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Rate Limiting (15 meme creations per minute per client)
+    // 1. Rate Limiting (30 meme creations per minute per client)
     const clientIp = getClientIp(req);
-    const rateLimit = await checkRateLimit(`meme_create:${clientIp}`, 15, 60);
+    const rateLimit = await checkRateLimit(`meme_create:${clientIp}`, 30, 60);
     if (!rateLimit.success) {
       return rateLimitResponse(rateLimit.reset);
     }
@@ -60,6 +61,26 @@ export async function POST(req: NextRequest) {
       return zodErrorResponse(err as import("zod").ZodError);
     }
     const message = err instanceof Error ? err.message : "Failed to create meme";
+    return errorResponse(message, 400);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return errorResponse("Meme ID is required", 400);
+    }
+
+    const prisma = (await import("@/lib/prisma")).default;
+    await prisma.meme.delete({
+      where: { id },
+    });
+
+    return successResponse({ id, deleted: true }, "Meme removed successfully");
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to delete meme";
     return errorResponse(message, 400);
   }
 }

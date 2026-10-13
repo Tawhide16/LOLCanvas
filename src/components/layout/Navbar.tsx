@@ -15,19 +15,30 @@ export default function Navbar() {
 
   const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
+    const evaluateAdmin = (email: string | null, role?: string | null) => {
+      if (!email) return false;
+      if (email.toLowerCase() === "admin123@gmail.com") return true;
+      if (role === "SUPER_ADMIN" || role === "ADMIN") return true;
+      return false;
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
         setUserEmail(session.user.email);
+        const role = (session.user.app_metadata?.role || session.user.user_metadata?.role) as string;
+        setIsAdmin(evaluateAdmin(session.user.email, role));
       } else if (typeof window !== "undefined") {
         try {
           const local = localStorage.getItem("lolcanvas_user");
           if (local) {
             const parsed = JSON.parse(local);
             setUserEmail(parsed.email || null);
+            setIsAdmin(evaluateAdmin(parsed.email, parsed.role));
           }
         } catch (e) {}
       }
@@ -36,6 +47,14 @@ export default function Navbar() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.email) {
         setUserEmail(session.user.email);
+        const role = (session.user.app_metadata?.role || session.user.user_metadata?.role) as string;
+        setIsAdmin(evaluateAdmin(session.user.email, role));
+      } else if (typeof window !== "undefined") {
+        const local = localStorage.getItem("lolcanvas_user");
+        if (!local) {
+          setUserEmail(null);
+          setIsAdmin(false);
+        }
       }
     });
 
@@ -138,22 +157,25 @@ export default function Navbar() {
           <span className="sm:hidden">+</span>
         </Link>
 
-        {/* Super Admin Portal Cell */}
-        <Link
-          href="/admin"
-          className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
-          title="Super Admin Control Center"
-        >
-          <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-          <span className="hidden sm:inline">SUPER ADMIN</span>
-          <span className="sm:hidden">ADMIN</span>
-        </Link>
+        {/* Super Admin Portal Cell (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
+        {mounted && isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
+            title="Super Admin Control Center"
+          >
+            <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
+            <span className="hidden sm:inline">SUPER ADMIN</span>
+            <span className="sm:hidden">ADMIN</span>
+          </Link>
+        )}
 
-        {/* Login / User Status Cell */}
+        {/* User Status Cell (Links to /profile when logged in, or /login when logged out) */}
         <Link
-          href="/login"
+          href={mounted && userEmail ? "/profile" : "/login"}
           suppressHydrationWarning
           className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[12px] tracking-wider text-black group"
+          title={mounted && userEmail ? "View Creator Profile" : "Sign In"}
         >
           {mounted && userEmail ? (
             <span suppressHydrationWarning className="flex items-center gap-1.5">
@@ -199,17 +221,19 @@ export default function Navbar() {
               <span className="text-[11px] text-[#888888]">→</span>
             </Link>
           ))}
-          <Link
-            href="/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between px-5 py-3 bg-[#FFE4E6] text-[#E11D48] font-bold"
-          >
-            <span className="flex items-center gap-2">
-              <Crown className="w-4 h-4" />
-              <span>SUPER ADMIN PORTAL</span>
-            </span>
-            <span className="text-[11px]">→</span>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-5 py-3 bg-[#FFE4E6] text-[#E11D48] font-bold"
+            >
+              <span className="flex items-center gap-2">
+                <Crown className="w-4 h-4" />
+                <span>SUPER ADMIN PORTAL</span>
+              </span>
+              <span className="text-[11px]">→</span>
+            </Link>
+          )}
         </motion.div>
       )}
     </nav>

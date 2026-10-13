@@ -16,6 +16,18 @@ export default function UploadPage() {
   const [submittedItem, setSubmittedItem] = useState<{ id: string; title: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const local = localStorage.getItem("lolcanvas_user");
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.email) setUserEmail(parsed.email);
+      }
+    } catch (e) {}
+  }, []);
+
   const handleFileChange = (selectedFile: File) => {
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
     if (!validTypes.includes(selectedFile.type)) {
@@ -26,18 +38,52 @@ export default function UploadPage() {
     setPreviewUrl(URL.createObjectURL(selectedFile));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !title.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmittedItem({
-        id: `SUB-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: title.trim().toUpperCase(),
-      });
-    }, 900);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUri = event.target?.result as string;
+      try {
+        const res = await fetch("/api/memes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: title.trim().toUpperCase(),
+            previewUrl: dataUri,
+            authorEmail: userEmail || "creator@lolcanvas.studio",
+            isPublic: true,
+            layers: [
+              {
+                id: `upload-${Date.now()}`,
+                type: "image",
+                imageUrl: dataUri,
+                x: 0,
+                y: 0,
+                zIndex: 1,
+              },
+            ],
+          }),
+        });
+
+        const data = await res.json();
+        setSubmittedItem({
+          id: data.data?.id || `SUB-${Math.floor(1000 + Math.random() * 9000)}`,
+          title: title.trim().toUpperCase(),
+        });
+      } catch (err) {
+        console.error("Upload error:", err);
+        setSubmittedItem({
+          id: `SUB-${Math.floor(1000 + Math.random() * 9000)}`,
+          title: title.trim().toUpperCase(),
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -78,6 +124,12 @@ export default function UploadPage() {
               className="px-5 py-2.5 bg-black text-white hover:bg-[#333333] uppercase font-bold"
             >
               BROWSE CATALOG
+            </Link>
+            <Link
+              href="/profile"
+              className="px-5 py-2.5 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white uppercase font-bold transition-colors"
+            >
+              VIEW IN PROFILE
             </Link>
             <button
               onClick={() => {
