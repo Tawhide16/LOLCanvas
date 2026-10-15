@@ -147,6 +147,13 @@ export default function MemeCard({
         <div className="grid grid-cols-2 gap-2 font-mono-code text-[11px]">
           <Link
             href={`/edit/${template.slug || template.id}`}
+            onClick={() => {
+              try {
+                sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+                if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+                if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+              } catch (e) {}
+            }}
             className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider text-center transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
             title="Edit this meme in Canvas Editor"
           >

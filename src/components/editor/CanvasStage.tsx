@@ -32,6 +32,22 @@ export default function CanvasStage({
   const [isDragging, setIsDragging] = useState(false);
   const [dragLayerId, setDragLayerId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const [, setForceRedraw] = useState(0);
+
+  const getImage = (src: string): HTMLImageElement => {
+    let img = imageCacheRef.current.get(src);
+    if (!img) {
+      img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = src;
+      img.onload = () => {
+        setForceRedraw((c) => c + 1);
+      };
+      imageCacheRef.current.set(src, img);
+    }
+    return img;
+  };
 
   // Render Canvas
   useEffect(() => {
@@ -126,9 +142,7 @@ export default function CanvasStage({
           const imgW = layer.width || 240;
           const imgH = layer.height || 180;
 
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = layer.imageUrl;
+          const img = getImage(layer.imageUrl);
 
           if (img.complete && img.naturalWidth > 0) {
             // Apply cropping parameters if configured
@@ -157,10 +171,7 @@ export default function CanvasStage({
             // Placeholder rect while image loads
             ctx.fillStyle = "#E6E4DC";
             ctx.fillRect(-imgW / 2, -imgH / 2, imgW, imgH);
-            img.onload = () => {
-              // Trigger redraw when loaded
-              onUpdateLayerPosition(layer.id, layer.x, layer.y);
-            };
+            // Image will trigger setForceRedraw once loaded in getImage()
           }
 
           // If selected, draw transform bounding box with corner anchors
@@ -223,21 +234,19 @@ export default function CanvasStage({
       });
     };
 
-    // Check background image
+    // Check background image with instant cache
     const bgSrc = backgroundImageUrl || (template ? template.svgDataUri : null);
 
     if (bgSrc) {
-      const bgImage = new Image();
-      bgImage.crossOrigin = "anonymous";
-      bgImage.src = bgSrc;
-
-      bgImage.onload = () => {
+      const bgImage = getImage(bgSrc);
+      if (bgImage.complete && bgImage.naturalWidth > 0) {
         ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
         renderAllLayers();
-      };
-      bgImage.onerror = () => {
+      } else {
+        ctx.fillStyle = "#FAF9F5";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         renderAllLayers();
-      };
+      }
     } else {
       renderAllLayers();
     }

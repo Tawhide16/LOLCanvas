@@ -142,6 +142,12 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                   </h3>
                   <Link
                     href={`/edit/${item.slug}`}
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                        if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                      } catch (e) {}
+                    }}
                     className="shrink-0 flex items-center gap-1 py-1 px-2.5 bg-black text-white hover:bg-[#333333] transition-all font-mono-code text-[10px] font-bold uppercase tracking-wider"
                   >
                     <Wand2 className="w-2.5 h-2.5" />
