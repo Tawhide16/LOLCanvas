@@ -1,6 +1,8 @@
-﻿import { useState } from "react";
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Download, Edit3, Eye, Check, Trash2, Lock } from "lucide-react";
+import { Download, Edit3, Eye, Check, Trash2 } from "lucide-react";
 import { Template } from "@/types";
 
 interface MemeCardProps {
@@ -33,7 +35,6 @@ export default function MemeCard({
       setDownloading(true);
       let sourceUrl = template.originalUrl || template.svgDataUri;
 
-      // If originalUrl wasn't loaded in the catalog list, fetch it on-demand for full real-size export
       if (!template.originalUrl && template.id) {
         try {
           const res = await fetch(`/api/templates?id=${encodeURIComponent(template.id)}`);
@@ -57,7 +58,6 @@ export default function MemeCard({
         img.onerror = reject;
       });
 
-      // Export using real natural dimensions
       const realWidth = img.naturalWidth || template.width || 1080;
       const realHeight = img.naturalHeight || template.height || 1080;
 
@@ -93,114 +93,138 @@ export default function MemeCard({
     template.tags?.find((t) => t.startsWith("author:"))?.replace("author:", "") ||
     null;
 
-  const isUploadedCard = Boolean(authorEmail);
   const isOwner = Boolean(
     authorEmail && currentUserEmail && authorEmail.toLowerCase().trim() === currentUserEmail.toLowerCase().trim()
   );
 
+  const canDelete = Boolean((isAdmin || isOwner) && onDelete);
+
+  const formattedDate = template.createdAt
+    ? new Date(template.createdAt).toLocaleDateString("en-GB")
+    : "15/10/2026";
+
+  const exportCount = template.downloadCount || template.remixCount || 0;
+
   return (
-    <article className="group flex flex-col justify-between bg-white hover:bg-[#F6F5EE] transition-colors border-r border-b border-black">
-      {/* Visual Preview */}
-
-      {/* Visual Preview - Full bleed meme with Shimmer Skeleton while loading */}
-      <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center">
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
-            <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
-              MEME
+    <article className="group bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+      <div className="space-y-3">
+        {/* Visual Preview Container matching the exact screenshot design */}
+        <Link
+          href={`/edit/${template.slug || template.id}`}
+          onClick={() => {
+            try {
+              sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+              if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+              if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+            } catch (e) {}
+          }}
+          className="bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center min-h-[220px] aspect-square relative overflow-hidden block cursor-pointer group-hover:border-black transition-colors"
+          title="Open in Canvas Editor"
+        >
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
+              <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
+                MEME
+              </div>
             </div>
-          </div>
-        )}
-        <img
-          src={template.svgDataUri}
-          alt={template.title}
-          loading="eager"
-          decoding="async"
-          onLoad={() => setImageLoaded(true)}
-          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
-        />
+          )}
+          <img
+            src={template.svgDataUri}
+            alt={template.title}
+            loading="eager"
+            decoding="async"
+            onLoad={() => setImageLoaded(true)}
+            className="w-auto h-auto max-w-full max-h-[210px] object-contain block group-hover:scale-105 transition-all duration-300 relative z-1"
+          />
 
-        {onPreview && (
-          <button
-            onClick={() => onPreview(template)}
-            className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
-            title="Inspect"
-            aria-label="Inspect template"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
+          {onPreview && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onPreview(template);
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
+              title="Inspect"
+              aria-label="Inspect template"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </Link>
 
-      {/* Minimal Title & Actions */}
-      <div className="p-3 border-t border-black/15 flex flex-col justify-between space-y-2.5 bg-[#FAF9F5]">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display font-bold text-xs sm:text-sm text-black uppercase tracking-tight truncate">
+        {/* Title and Metadata Line matching the screenshot */}
+        <div className="space-y-1">
+          <h3 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
             {template.title}
           </h3>
-          <span className="font-mono-code text-[10px] text-[#777777] shrink-0 ml-2">
-            {(template.remixCount / 1000).toFixed(0)}K
-          </span>
+          <div className="font-mono-code text-[10px] text-[#777777] flex items-center justify-between">
+            <span>CREATED: {formattedDate}</span>
+            <span>{exportCount} EXPORTS</span>
+          </div>
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2 font-mono-code text-[11px]">
-          <Link
-            href={`/edit/${template.slug || template.id}`}
-            onClick={() => {
-              try {
-                sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
-                if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
-                if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
-              } catch (e) {}
-            }}
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider text-center transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
-            title="Edit this meme in Canvas Editor"
-          >
-            <Edit3 className="w-3 h-3 text-[#10B981]" />
-            EDIT
-          </Link>
+      {/* Action Buttons matching the screenshot (EDIT, PNG, DELETE) */}
+      <div
+        className={`pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold ${
+          canDelete ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-2"
+        }`}
+      >
+        <Link
+          href={`/edit/${template.slug || template.id}`}
+          onClick={() => {
+            try {
+              sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+              if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+              if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+            } catch (e) {}
+          }}
+          className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+          title="Edit this meme in Canvas Editor"
+        >
+          <Edit3 className="w-3 h-3 text-[#10B981]" />
+          <span>EDIT</span>
+        </Link>
 
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white border border-black text-black hover:bg-[#E6E4DC] uppercase tracking-wider text-center transition-all hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50"
-            title="Download clean PNG"
-          >
-            {downloadSuccess ? (
-              <>
-                <Check className="w-3 h-3 text-[#10B981]" />
-                SAVED
-              </>
-            ) : downloading ? (
-              <span>...</span>
-            ) : (
-              <>
-                <Download className="w-3 h-3 text-black" />
-                PNG
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] text-black uppercase text-center flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+          title="Download clean PNG"
+        >
+          {downloadSuccess ? (
+            <>
+              <Check className="w-3 h-3 text-[#10B981]" />
+              <span>SAVED</span>
+            </>
+          ) : downloading ? (
+            <span>...</span>
+          ) : (
+            <>
+              <Download className="w-3 h-3 text-black" />
+              <span>PNG</span>
+            </>
+          )}
+        </button>
 
-        {/* Super Admin Single-Click Card Removal */}
-        {isAdmin && onDelete && (
+        {canDelete && (
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onDelete(template.id || template.slug, template.title);
+              onDelete!(template.id || template.slug, template.title);
             }}
-            className="w-full py-1 bg-[#FFF1F2] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white font-mono-code text-[10px] font-bold uppercase transition-colors flex items-center justify-center gap-1 shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
-            title="Super Admin: Delete this card from the website"
+            className="py-1.5 px-2 bg-white text-[#E11D48] border border-[#E11D48] hover:bg-[#FFF1F2] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+            title="Delete this meme card"
           >
             <Trash2 className="w-3 h-3" />
-            <span>REMOVE CARD âœ•</span>
+            <span>DELETE</span>
           </button>
         )}
       </div>
     </article>
   );
 }
-

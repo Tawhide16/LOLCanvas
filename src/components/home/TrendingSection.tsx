@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wand2, Edit3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TrendingSectionProps {
@@ -115,31 +115,15 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -direction * 25 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-black bg-[#FAF9F5]"
+            className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-[#FAF9F5]"
           >
             {visibleItems.map((item, idx) => (
               <article
                 key={item.id}
-                className="group flex flex-col justify-between bg-white hover:bg-[#F6F5EE] transition-colors relative"
+                className="group bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative"
               >
-
-
-                {/* Template Preview - Full bleed meme (Zero whitespace around) */}
-                <div className="w-full aspect-square relative overflow-hidden bg-black/5 flex items-center justify-center">
-                  <img
-                    src={item.svgDataUri}
-                    alt={item.title}
-                    loading="eager"
-                    decoding="async"
-                    className="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-
-                {/* Minimal Title & Direct Remix CTA */}
-                <div className="p-3 border-t border-black/15 flex items-center justify-between gap-2 bg-[#FAF9F5]">
-                  <h3 className="font-display font-bold text-xs text-black uppercase tracking-tight truncate">
-                    {item.title}
-                  </h3>
+                <div className="space-y-3">
+                  {/* Framed Image Preview matching screenshot */}
                   <Link
                     href={`/edit/${item.slug}`}
                     onClick={() => {
@@ -148,10 +132,43 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                         if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
                       } catch (e) {}
                     }}
-                    className="shrink-0 flex items-center gap-1 py-1 px-2.5 bg-black text-white hover:bg-[#333333] transition-all font-mono-code text-[10px] font-bold uppercase tracking-wider"
+                    className="bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center aspect-square relative overflow-hidden block cursor-pointer group-hover:border-black transition-colors"
                   >
-                    <Wand2 className="w-2.5 h-2.5" />
-                    REMIX
+                    <img
+                      src={item.svgDataUri}
+                      alt={item.title}
+                      loading="eager"
+                      decoding="async"
+                      className="w-auto h-auto max-w-full max-h-[210px] object-contain block group-hover:scale-105 transition-all duration-300"
+                    />
+                  </Link>
+
+                  {/* Title & Metadata */}
+                  <div className="space-y-1">
+                    <h3 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
+                      {item.title}
+                    </h3>
+                    <div className="font-mono-code text-[10px] text-[#777777] flex items-center justify-between">
+                      <span>CREATED: {item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-GB") : "15/10/2026"}</span>
+                      <span>{item.downloadCount || item.remixCount || 0} EXPORTS</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remix Button */}
+                <div className="pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
+                  <Link
+                    href={`/edit/${item.slug}`}
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                        if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                      } catch (e) {}
+                    }}
+                    className="w-full py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3 text-[#10B981]" />
+                    <span>EDIT IN CANVAS</span>
                   </Link>
                 </div>
               </article>
