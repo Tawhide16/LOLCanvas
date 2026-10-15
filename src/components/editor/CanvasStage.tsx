@@ -1,5 +1,7 @@
 "use client";
 
+import { loadGoogleFont } from "@/lib/googleFonts";
+
 import React, { useRef, useEffect, useState } from "react";
 import { CanvasLayer, Template } from "@/types";
 
@@ -78,7 +80,8 @@ export default function CanvasStage({
           const fontFamily = layer.fontFamily || "Impact";
           const textToRender = layer.isUppercase ? layer.text.toUpperCase() : layer.text;
 
-          ctx.font = `900 ${fontSize}px ${fontFamily}, sans-serif`;
+          loadGoogleFont(fontFamily, () => setForceRedraw((c) => c + 1));
+          ctx.font = `900 ${fontSize}px "${fontFamily}", sans-serif`;
           ctx.textAlign = layer.align || "center";
           ctx.textBaseline = "middle";
 

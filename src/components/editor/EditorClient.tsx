@@ -7,6 +7,7 @@ import {
   Share2,
   Video,
   Smile,
+  Sparkles,
   Maximize2,
   UploadCloud,
   LogOut,
@@ -28,6 +29,7 @@ import {
   Layers,
   ChevronRight,
   Sliders,
+  Search,
   Crop,
   RotateCw,
 } from "lucide-react";
@@ -112,6 +114,15 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
   const [lockAspectRatio, setLockAspectRatio] = useState<boolean>(false);
   const [customDimensionError, setCustomDimensionError] = useState<string | null>(null);
 
+  // All community uploaded memes for CHANGE BASE MEME
+  const [allUploadedMemes, setAllUploadedMemes] = useState<Template[]>([]);
+  const [baseMemeSearch, setBaseMemeSearch] = useState("");
+  const [baseMemeTab, setBaseMemeTab] = useState<"uploaded" | "classic">("uploaded");
+
+  // Personal overlay cutouts from user's local PC
+  const personalOverlayInputRef = useRef<HTMLInputElement>(null);
+  const [personalOverlays, setPersonalOverlays] = useState<Array<{ id: string; name: string; imageUrl: string }>>([]);
+
   // Uploaded assets state
   const [uploadedAssets, setUploadedAssets] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -195,6 +206,58 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
     return () => {
       document.body.style.overflow = originalOverflow;
     };
+  }, []);
+
+  // Load all community uploaded memes for CHANGE BASE MEME
+  useEffect(() => {
+    async function loadAllUploadedTemplates() {
+      try {
+        const res = await fetch("/api/templates?category=all&limit=100");
+        if (res.ok) {
+          const json = await res.json();
+          const tpls = json.data?.templates || [];
+          if (tpls.length > 0) {
+            const formatted: Template[] = tpls.map((t: any, idx: number) => ({
+              id: t.id,
+              slug: t.slug || t.id,
+              index: t.index || `№ ${(idx + 1).toString().padStart(4, "0")}`,
+              title: t.title || "UNTITLED MEME",
+              categoryId: t.category || "classic",
+              categoryName: (t.category || "classic").toUpperCase(),
+              format: "classic",
+              formatLabel: "Community Upload",
+              remixCount: t.downloads || 150,
+              downloadCount: t.downloads || 80,
+              createdAt: t.createdAt || new Date().toISOString(),
+              source: "Community Upload",
+              license: "Free to remix",
+              aspectRatio: `${t.width || 1080}:${t.height || 1080}`,
+              width: t.width || 1080,
+              height: t.height || 1080,
+              defaultTopText: t.defaultTopText || "",
+              defaultBottomText: t.defaultBottomText || "",
+              svgDataUri: t.svgDataUri || t.originalUrl,
+              originalUrl: t.originalUrl || t.svgDataUri,
+              isWatermarkFree: true,
+              tags: t.tags || [],
+            }));
+            setAllUploadedMemes(formatted);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load community templates:", e);
+      }
+    }
+
+    loadAllUploadedTemplates();
+
+    // Load saved personal overlays from local storage
+    try {
+      const saved = localStorage.getItem("lolcanvas_personal_overlays");
+      if (saved) {
+        setPersonalOverlays(JSON.parse(saved));
+      }
+    } catch (e) {}
   }, []);
 
   // Dynamically load custom or uploaded templates by id or slug
@@ -297,9 +360,41 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
     setHasUnsavedChanges(true);
   };
 
+  // Personal local overlays handler
+  const handleUploadPersonalOverlay = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUri = e.target?.result as string;
+      if (dataUri) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
+        const newCutout = {
+          id: `cutout-${Date.now()}`,
+          name: cleanName,
+          imageUrl: dataUri,
+        };
+        const updated = [newCutout, ...personalOverlays];
+        setPersonalOverlays(updated);
+        try {
+          localStorage.setItem("lolcanvas_personal_overlays", JSON.stringify(updated.slice(0, 30)));
+        } catch (err) {}
+        handleAddImageLayer(dataUri, cleanName, 260, 260);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeletePersonalOverlay = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = personalOverlays.filter((o) => o.id !== id);
+    setPersonalOverlays(updated);
+    try {
+      localStorage.setItem("lolcanvas_personal_overlays", JSON.stringify(updated));
+    } catch (err) {}
+  };
+
   const handleSelectMemeTemplate = (template: Template) => {
     setCurrentTemplate(template);
-    setCustomBgImage(null);
+    setCustomBgImage(template.svgDataUri || template.originalUrl || null);
     setCanvasWidth(template.width);
     setCanvasHeight(template.height);
     setActivePresetName(template.title);
@@ -1002,15 +1097,85 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
                     + ADD IMAGE ON TOP OF MEME
                   </button>
 
-                  {/* Quick Preset Meme Overlay Stickers */}
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[9px] text-[#777777] uppercase block">
-                      QUICK OVERLAYS & CUTOUTS (CLICK TO ADD):
-                    </span>
-                    <div className="grid grid-cols-4 gap-1.5">
+                  {/* Quick Preset Meme Overlay Stickers & Personal Uploaded Cutouts */}
+                  <div className="space-y-2 pt-2 border-t border-black/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-black font-bold uppercase flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-[#E11D48]" />
+                        QUICK OVERLAYS & CUTOUTS:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => personalOverlayInputRef.current?.click()}
+                        className="text-[9px] font-bold text-[#E11D48] hover:underline uppercase flex items-center gap-0.5"
+                      >
+                        <Plus className="w-2.5 h-2.5" /> ADD FROM PC
+                      </button>
+                    </div>
+
+                    {/* Hidden file input for personal content upload */}
+                    <input
+                      ref={personalOverlayInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleUploadPersonalOverlay(file);
+                          e.target.value = "";
+                        }
+                      }}
+                      className="hidden"
+                    />
+
+                    <div className="grid grid-cols-4 gap-1.5 max-h-[140px] overflow-y-auto p-0.5">
+                      {/* 1. Add Personal Content Button from Local Computer */}
+                      <button
+                        type="button"
+                        onClick={() => personalOverlayInputRef.current?.click()}
+                        className="p-1 bg-[#FAF9F5] border-2 border-dashed border-[#E11D48] hover:bg-[#FFF1F2] transition-all flex flex-col items-center justify-center aspect-square text-center group"
+                        title="Upload personal image or cutout from your computer"
+                      >
+                        <UploadCloud className="w-4 h-4 text-[#E11D48] group-hover:scale-110 transition-transform mb-0.5" />
+                        <span className="text-[8px] font-mono-code font-bold text-[#E11D48] leading-tight uppercase">
+                          + FROM<br />PC
+                        </span>
+                      </button>
+
+                      {/* 2. User's Personal Uploaded Cutouts */}
+                      {personalOverlays.map((item) => (
+                        <div key={item.id} className="relative group/cutout aspect-square">
+                          <button
+                            type="button"
+                            onClick={() => handleAddImageLayer(item.imageUrl, item.name, 260, 260)}
+                            className="w-full h-full p-1 bg-[#F0FDF4] border border-[#16A34A] hover:border-black hover:bg-white transition-all flex flex-col items-center justify-center overflow-hidden"
+                            title={`Add personal overlay: ${item.name}`}
+                          >
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                            <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[7px] bg-black/80 text-white font-mono-code uppercase truncate px-0.5 text-center">
+                              MY
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeletePersonalOverlay(item.id, e)}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-[#E11D48] text-white rounded-full flex items-center justify-center opacity-0 group-hover/cutout:opacity-100 transition-opacity z-10 hover:scale-110"
+                            title="Remove cutout"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* 3. Built-in Preset Meme Overlays */}
                       {MEME_OVERLAYS.map((overlay) => (
                         <button
                           key={overlay.id}
+                          type="button"
                           onClick={() =>
                             handleAddImageLayer(
                               overlay.imageUrl,
@@ -1033,42 +1198,106 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
                   </div>
                 </div>
 
-                {/* Popular Meme Templates Gallery */}
-                <div className="p-4 border-b border-black space-y-2">
+                {/* ============================================================== */}
+                {/* CHANGE BASE MEME - SHOWS ALL USER UPLOADED MEMES               */}
+                {/* ============================================================== */}
+                <div className="p-4 border-b border-black space-y-2.5 bg-[#FAF9F5]">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#777777] uppercase">
-                      CHANGE BASE MEME
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-black uppercase">
+                        CHANGE BASE MEME
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 bg-[#E11D48] text-white font-mono-code font-bold">
+                        {allUploadedMemes.length} UPLOADED
+                      </span>
+                    </div>
                     <button
+                      type="button"
                       onClick={handleBlankMemeCanvas}
                       className="text-[10px] font-bold text-[#E11D48] hover:underline uppercase"
                     >
                       BLANK CANVAS
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto">
-                    {TEMPLATES.map((tpl) => (
+
+                  {/* Search and Tabs */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={baseMemeSearch}
+                        onChange={(e) => setBaseMemeSearch(e.target.value)}
+                        placeholder="SEARCH UPLOADED MEMES..."
+                        className="w-full pl-6 pr-2 py-1.5 bg-white border border-black text-[10px] font-bold uppercase focus:outline-none"
+                      />
+                      <Search className="w-3 h-3 text-[#777777] absolute left-2 top-2" />
+                    </div>
+
+                    <div className="grid grid-cols-2 border border-black divide-x divide-black bg-white text-[9px] font-bold uppercase">
                       <button
-                        key={tpl.id}
-                        onClick={() => handleSelectMemeTemplate(tpl)}
-                        className={`p-2 border text-left flex flex-col justify-between transition-all ${
-                          currentTemplate?.id === tpl.id
-                            ? "bg-white border-black ring-2 ring-black"
-                            : "bg-white border-black/20 hover:border-black hover:bg-[#F6F5EE]"
+                        type="button"
+                        onClick={() => setBaseMemeTab("uploaded")}
+                        className={`py-1 px-2 text-center transition-colors ${
+                          baseMemeTab === "uploaded"
+                            ? "bg-black text-white"
+                            : "text-[#777777] hover:text-black"
                         }`}
                       >
-                        <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/15 p-1 mb-1 flex items-center justify-center overflow-hidden">
-                          <img
-                            src={tpl.svgDataUri}
-                            alt={tpl.title}
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-                        <span className="font-display font-bold text-[10px] uppercase truncate block">
-                          {tpl.title}
-                        </span>
+                        UPLOADED ({allUploadedMemes.length})
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setBaseMemeTab("classic")}
+                        className={`py-1 px-2 text-center transition-colors ${
+                          baseMemeTab === "classic"
+                            ? "bg-black text-white"
+                            : "text-[#777777] hover:text-black"
+                        }`}
+                      >
+                        ALL CLASSICS ({TEMPLATES.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Grid of Base Memes */}
+                  <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-0.5">
+                    {(baseMemeTab === "uploaded" && allUploadedMemes.length > 0
+                      ? allUploadedMemes
+                      : TEMPLATES
+                    )
+                      .filter(
+                        (t) =>
+                          !baseMemeSearch ||
+                          t.title.toLowerCase().includes(baseMemeSearch.toLowerCase())
+                      )
+                      .map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => handleSelectMemeTemplate(tpl)}
+                          className={`p-2 border text-left flex flex-col justify-between transition-all group ${
+                            currentTemplate?.id === tpl.id
+                              ? "bg-white border-black ring-2 ring-black"
+                              : "bg-white border-black/20 hover:border-black hover:bg-[#F6F5EE]"
+                          }`}
+                        >
+                          <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/15 p-1 mb-1.5 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={tpl.svgDataUri}
+                              alt={tpl.title}
+                              className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="font-display font-bold text-[10px] uppercase truncate block text-black">
+                              {tpl.title}
+                            </span>
+                            <span className="font-mono-code text-[8px] text-[#777777] uppercase block truncate">
+                              {tpl.categoryName || tpl.categoryId || "MEME"}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
                   </div>
                 </div>
 

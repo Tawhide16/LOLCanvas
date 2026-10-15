@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { CanvasLayer } from "@/types";
-import { AlignLeft, AlignCenter, AlignRight, Type, Stamp, Sparkles } from "lucide-react";
+import { AlignLeft, AlignCenter, AlignRight, Type, Stamp, Sparkles, Pipette, Plus, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import { GOOGLE_FONTS_CATALOG, loadGoogleFont } from "@/lib/googleFonts";
 
 interface TextControlsProps {
   selectedLayer: CanvasLayer | null;
@@ -12,15 +13,6 @@ interface TextControlsProps {
   onAddSticker: (symbol: string) => void;
 }
 
-const FONT_OPTIONS = [
-  { label: "Impact", value: "Impact" },
-  { label: "Space Grotesk", value: "Space Grotesk" },
-  { label: "Space Mono", value: "Space Mono" },
-  { label: "Inter", value: "Inter" },
-  { label: "Arial Black", value: "Arial Black" },
-  { label: "Comic Sans MS", value: "Comic Sans MS" },
-];
-
 const COLOR_PRESETS = [
   { label: "White", value: "#FFFFFF" },
   { label: "Black", value: "#000000" },
@@ -28,6 +20,8 @@ const COLOR_PRESETS = [
   { label: "Yellow", value: "#FACC15" },
   { label: "Cyan", value: "#06B6D4" },
   { label: "Green", value: "#10B981" },
+  { label: "Orange", value: "#F97316" },
+  { label: "Purple", value: "#A855F7" },
 ];
 
 const STAMPS = ["VERIFIED", "CERTIFIED", "CONFIDENTIAL", "VIRAL", "BASED"];
@@ -39,6 +33,29 @@ export default function TextControls({
   onAddSticker,
 }: TextControlsProps) {
   const [activeTab, setActiveTab] = useState<"text" | "stamps">("text");
+  const [customFontInput, setCustomFontInput] = useState("");
+  const [fontSearch, setFontSearch] = useState("");
+  const [showAllFonts, setShowAllFonts] = useState(false);
+
+  // Group fonts by category
+  const filteredFonts = GOOGLE_FONTS_CATALOG.filter((f) =>
+    f.name.toLowerCase().includes(fontSearch.toLowerCase())
+  );
+
+  const handleSelectFont = (fontName: string) => {
+    if (!selectedLayer) return;
+    loadGoogleFont(fontName);
+    onUpdateLayer(selectedLayer.id, { fontFamily: fontName });
+  };
+
+  const handleAddCustomGoogleFont = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customFontInput.trim() || !selectedLayer) return;
+    const fontName = customFontInput.trim();
+    loadGoogleFont(fontName);
+    onUpdateLayer(selectedLayer.id, { fontFamily: fontName });
+    setCustomFontInput("");
+  };
 
   return (
     <div className="bg-white border-b border-black font-mono-code text-xs">
@@ -115,25 +132,96 @@ export default function TextControls({
                 />
               </div>
 
-              {/* Font Family */}
-              <div className="space-y-1">
-                <span className="block text-[10px] text-[#777777] uppercase font-bold">FONT</span>
+              {/* Comprehensive Google Fonts Library */}
+              <div className="space-y-1.5 border border-black p-2.5 bg-[#FAF9F5]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-black font-bold uppercase flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#E11D48]" />
+                    GOOGLE FONTS ({GOOGLE_FONTS_CATALOG.length}+)
+                  </span>
+                  <span className="text-[9px] font-bold text-[#777777] uppercase truncate max-w-[120px]">
+                    ACTIVE: {selectedLayer.fontFamily || "Impact"}
+                  </span>
+                </div>
+
+                {/* Main Font Select Dropdown */}
                 <select
                   value={selectedLayer.fontFamily || "Impact"}
-                  onChange={(e) =>
-                    onUpdateLayer(selectedLayer.id, { fontFamily: e.target.value })
-                  }
-                  className="w-full p-2 bg-[#FAF9F5] border border-black font-mono-code text-xs text-black uppercase focus:outline-none cursor-pointer"
+                  onChange={(e) => handleSelectFont(e.target.value)}
+                  className="w-full p-2 bg-white border border-black font-mono-code text-xs text-black uppercase focus:outline-none cursor-pointer"
                 >
-                  {FONT_OPTIONS.map((f) => (
-                    <option key={f.value} value={f.value}>
-                      {f.label}
-                    </option>
-                  ))}
+                  <optgroup label="Meme & Headline Classics">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Meme Bold").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Clean Modern Sans">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Clean Sans").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Monospace & Retro Gaming">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Monospace & Retro").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Display, Comic & Fun">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Display & Fun").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Handwriting & Marker">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Handwriting & Marker").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Vintage & Serif">
+                    {GOOGLE_FONTS_CATALOG.filter((f) => f.category === "Vintage & Serif").map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {/* If custom font is applied not in list */}
+                  {selectedLayer.fontFamily &&
+                    !GOOGLE_FONTS_CATALOG.some((f) => f.name === selectedLayer.fontFamily) && (
+                      <option value={selectedLayer.fontFamily}>
+                        {selectedLayer.fontFamily} (Custom)
+                      </option>
+                    )}
                 </select>
+
+                {/* Add ANY Custom Google Font input */}
+                <form onSubmit={handleAddCustomGoogleFont} className="flex gap-1 pt-1">
+                  <input
+                    type="text"
+                    value={customFontInput}
+                    onChange={(e) => setCustomFontInput(e.target.value)}
+                    placeholder="ENTER ANY GOOGLE FONT NAME..."
+                    className="flex-1 px-2 py-1 bg-white border border-black/40 text-[10px] uppercase font-bold focus:outline-none focus:border-black"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!customFontInput.trim()}
+                    className="px-2.5 py-1 bg-black text-white hover:bg-[#333333] text-[10px] font-bold uppercase transition-colors disabled:opacity-40"
+                    title="Load any Google font on demand"
+                  >
+                    + LOAD
+                  </button>
+                </form>
               </div>
 
-              {/* Size & Outline */}
+              {/* Size & Outline Sliders */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <div className="flex justify-between text-[10px] text-[#777777] uppercase font-bold">
@@ -143,7 +231,7 @@ export default function TextControls({
                   <input
                     type="range"
                     min="18"
-                    max="96"
+                    max="120"
                     value={selectedLayer.fontSize || 42}
                     onChange={(e) =>
                       onUpdateLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
@@ -160,7 +248,7 @@ export default function TextControls({
                   <input
                     type="range"
                     min="0"
-                    max="16"
+                    max="20"
                     value={selectedLayer.strokeWidth || 6}
                     onChange={(e) =>
                       onUpdateLayer(selectedLayer.id, { strokeWidth: Number(e.target.value) })
@@ -170,64 +258,158 @@ export default function TextControls({
                 </div>
               </div>
 
-              {/* Colors */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="block text-[10px] text-[#777777] uppercase font-bold">COLOR</span>
-                  <div className="flex items-center gap-1.5">
+              {/* ============================================================== */}
+              {/* ADVANCED COLOR PICKER & COLOR CODE INPUTS                      */}
+              {/* ============================================================== */}
+              <div className="space-y-3 border-t border-black/15 pt-3">
+                {/* 1. TEXT COLOR WITH COLOR PICKER & COLOR CODE */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-black uppercase font-bold flex items-center gap-1">
+                      <Pipette className="w-3 h-3 text-[#E11D48]" />
+                      TEXT COLOR
+                    </span>
+                    {/* Hex Code Input */}
+                    <div className="flex items-center border border-black bg-white px-1.5 py-0.5">
+                      <span className="text-[10px] text-[#777777] font-bold mr-0.5">#</span>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={(selectedLayer.color || "#FFFFFF").replace("#", "")}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9A-Fa-f]/g, "");
+                          onUpdateLayer(selectedLayer.id, { color: `#${val}` });
+                        }}
+                        placeholder="FFFFFF"
+                        className="w-16 font-mono-code text-[11px] font-bold uppercase focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Swatches + Native Visual Color Picker */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Visual Color Picker Box */}
+                    <label
+                      className="relative w-6 h-6 border-2 border-black cursor-pointer overflow-hidden shrink-0 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform"
+                      title="Open Visual Color Picker"
+                      style={{ backgroundColor: selectedLayer.color || "#FFFFFF" }}
+                    >
+                      <input
+                        type="color"
+                        value={selectedLayer.color || "#FFFFFF"}
+                        onChange={(e) => onUpdateLayer(selectedLayer.id, { color: e.target.value })}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Presets */}
                     {COLOR_PRESETS.map((c) => (
                       <button
                         key={c.value}
+                        type="button"
                         onClick={() => onUpdateLayer(selectedLayer.id, { color: c.value })}
-                        className={`w-5 h-5 border ${
-                          selectedLayer.color === c.value ? "border-[#E11D48] ring-2 ring-black" : "border-black/30"
+                        className={`w-5 h-5 border transition-all ${
+                          selectedLayer.color?.toUpperCase() === c.value.toUpperCase()
+                            ? "border-[#E11D48] ring-2 ring-black scale-110"
+                            : "border-black/30 hover:border-black"
                         }`}
                         style={{ backgroundColor: c.value }}
+                        title={c.label}
                       />
                     ))}
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="block text-[10px] text-[#777777] uppercase font-bold">OUTLINE</span>
-                  <div className="flex items-center gap-1.5">
-                    {COLOR_PRESETS.slice(0, 4).map((c) => (
+                {/* 2. OUTLINE COLOR WITH COLOR PICKER & COLOR CODE */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-black uppercase font-bold flex items-center gap-1">
+                      <Pipette className="w-3 h-3 text-[#777777]" />
+                      OUTLINE COLOR
+                    </span>
+                    {/* Hex Code Input */}
+                    <div className="flex items-center border border-black bg-white px-1.5 py-0.5">
+                      <span className="text-[10px] text-[#777777] font-bold mr-0.5">#</span>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={(selectedLayer.strokeColor || "#000000").replace("#", "")}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9A-Fa-f]/g, "");
+                          onUpdateLayer(selectedLayer.id, { strokeColor: `#${val}` });
+                        }}
+                        placeholder="000000"
+                        className="w-16 font-mono-code text-[11px] font-bold uppercase focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Swatches + Native Visual Color Picker */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Visual Color Picker Box */}
+                    <label
+                      className="relative w-6 h-6 border-2 border-black cursor-pointer overflow-hidden shrink-0 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform"
+                      title="Open Visual Color Picker"
+                      style={{ backgroundColor: selectedLayer.strokeColor || "#000000" }}
+                    >
+                      <input
+                        type="color"
+                        value={selectedLayer.strokeColor || "#000000"}
+                        onChange={(e) =>
+                          onUpdateLayer(selectedLayer.id, { strokeColor: e.target.value })
+                        }
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Presets */}
+                    {COLOR_PRESETS.map((c) => (
                       <button
                         key={c.value}
+                        type="button"
                         onClick={() => onUpdateLayer(selectedLayer.id, { strokeColor: c.value })}
-                        className={`w-5 h-5 border ${
-                          selectedLayer.strokeColor === c.value ? "border-[#E11D48] ring-2 ring-black" : "border-black/30"
+                        className={`w-5 h-5 border transition-all ${
+                          selectedLayer.strokeColor?.toUpperCase() === c.value.toUpperCase()
+                            ? "border-[#E11D48] ring-2 ring-black scale-110"
+                            : "border-black/30 hover:border-black"
                         }`}
                         style={{ backgroundColor: c.value }}
+                        title={c.label}
                       />
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Alignment */}
-              <div className="grid grid-cols-3 border border-black divide-x divide-black bg-[#FAF9F5]">
+              {/* Alignment Controls */}
+              <div className="grid grid-cols-3 border border-black divide-x divide-black bg-[#FAF9F5] mt-2">
                 <button
+                  type="button"
                   onClick={() => onUpdateLayer(selectedLayer.id, { align: "left" })}
-                  className={`p-1.5 flex items-center justify-center ${
+                  className={`p-2 flex items-center justify-center transition-colors ${
                     selectedLayer.align === "left" ? "bg-black text-white" : "hover:bg-[#E6E4DC]"
                   }`}
+                  title="Align Left"
                 >
                   <AlignLeft className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => onUpdateLayer(selectedLayer.id, { align: "center" })}
-                  className={`p-1.5 flex items-center justify-center ${
+                  className={`p-2 flex items-center justify-center transition-colors ${
                     selectedLayer.align === "center" ? "bg-black text-white" : "hover:bg-[#E6E4DC]"
                   }`}
+                  title="Align Center"
                 >
                   <AlignCenter className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => onUpdateLayer(selectedLayer.id, { align: "right" })}
-                  className={`p-1.5 flex items-center justify-center ${
+                  className={`p-2 flex items-center justify-center transition-colors ${
                     selectedLayer.align === "right" ? "bg-black text-white" : "hover:bg-[#E6E4DC]"
                   }`}
+                  title="Align Right"
                 >
                   <AlignRight className="w-3.5 h-3.5" />
                 </button>
