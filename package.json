@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3002",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "auto-push": "powershell -ExecutionPolicy Bypass -File ./auto_push.ps1"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
@@ -41,3 +42,4 @@
     "typescript": "^5"
   }
 }
+
