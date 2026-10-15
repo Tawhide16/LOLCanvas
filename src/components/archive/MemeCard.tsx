@@ -24,8 +24,9 @@ export default function MemeCard({
 }: MemeCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const displayImage = template.svgDataUri || (template as any).previewUrl || template.originalUrl || "";
   const [imageLoaded, setImageLoaded] = useState(() => {
-    return typeof template?.svgDataUri === "string" && template.svgDataUri.startsWith("data:");
+    return typeof displayImage === "string" && displayImage.startsWith("data:");
   });
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -128,7 +129,7 @@ export default function MemeCard({
           </div>
         )}
         <img
-          src={template.svgDataUri}
+          src={displayImage}
           alt={template.title}
           loading="eager"
           decoding="async"

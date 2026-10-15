@@ -1101,11 +1101,18 @@ export default function AdminPage() {
                 {memes.map((m) => (
                   <div
                     key={m.id}
-                    className="bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
                   >
-                    <div className="bg-[#FAF9F5] border border-black/20 p-2 flex items-center justify-center min-h-[220px]">
+                    {/* Full-bleed Top Image */}
+                    <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center border-b border-black">
                       {m.previewUrl ? (
-                        <img src={m.previewUrl} alt={m.title} className="w-auto h-auto max-w-full max-h-[210px] object-contain" />
+                        <img
+                          src={m.previewUrl}
+                          alt={m.title}
+                          loading="eager"
+                          decoding="async"
+                          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
+                        />
                       ) : (
                         <div className="font-mono-code text-xs text-[#777777] text-center">
                           NO PREVIEW IMAGE
@@ -1113,27 +1120,30 @@ export default function AdminPage() {
                       )}
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="font-display font-bold text-sm uppercase text-black truncate">
-                        {m.title}
+                    {/* Bottom Content with padding */}
+                    <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
+                      <div className="space-y-1">
+                        <div className="font-display font-bold text-sm uppercase text-black truncate tracking-tight">
+                          {m.title}
+                        </div>
+                        <div className="flex items-center justify-between font-mono-code text-[10px] text-[#777777]">
+                          <span>BY: {m.author?.email || "ANONYMOUS"}</span>
+                          <span>{new Date(m.createdAt).toLocaleDateString("en-GB")}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between font-mono-code text-[10px] text-[#777777]">
-                        <span>BY: {m.author?.email || "ANONYMOUS"}</span>
-                        <span>{new Date(m.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-black/10">
-                      <span className="font-mono-code text-[10px] font-bold text-black uppercase">
-                        {m.downloads} EXPORTS // {m.likes} LIKES
-                      </span>
-                      <button
-                        onClick={() => handleDeleteMeme(m.id, m.title)}
-                        className="px-3 py-1 bg-[#FFF1F2] text-[#E11D48] border border-[#E11D48] hover:bg-[#E11D48] hover:text-white font-mono-code text-[11px] font-bold uppercase transition-colors flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        DELETE MEME
-                      </button>
+                      <div className="flex items-center justify-between pt-2 border-t border-black/10">
+                        <span className="font-mono-code text-[10px] font-bold text-black uppercase">
+                          {m.downloads} EXPORTS // {m.likes} LIKES
+                        </span>
+                        <button
+                          onClick={() => handleDeleteMeme(m.id, m.title)}
+                          className="px-3 py-1 bg-[#FFF1F2] text-[#E11D48] border border-[#E11D48] hover:bg-[#E11D48] hover:text-white font-mono-code text-[11px] font-bold uppercase transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          DELETE
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

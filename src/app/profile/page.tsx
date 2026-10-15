@@ -639,61 +639,69 @@ export default function ProfilePage() {
               {memes.map((m) => (
                 <div
                   key={m.id}
-                  className="bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between"
+                  className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
                 >
-                  <div className="space-y-3">
-                    <div className="bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center min-h-[220px]">
-                      {m.previewUrl ? (
-                        <img
-                          src={m.previewUrl}
-                          alt={m.title}
-                          className="w-auto h-auto max-w-full max-h-[210px] object-contain"
-                        />
-                      ) : (
-                        <div className="font-mono-code text-xs text-[#777777]">SVG MEME</div>
-                      )}
-                    </div>
+                  {/* Full-bleed Top Image filling the upper card completely with zero white space */}
+                  <div
+                    onClick={() => openEditMemeModal(m)}
+                    className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block cursor-pointer border-b border-black"
+                    title="Click to edit meme"
+                  >
+                    {m.previewUrl ? (
+                      <img
+                        src={m.previewUrl}
+                        alt={m.title}
+                        loading="eager"
+                        decoding="async"
+                        className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
+                      />
+                    ) : (
+                      <div className="font-mono-code text-xs text-[#777777]">SVG MEME</div>
+                    )}
+                  </div>
 
+                  {/* Bottom Content with padding */}
+                  <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
                     <div className="space-y-1">
-                      <h4 className="font-display font-extrabold text-sm uppercase text-black truncate">
+                      <h4 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
                         {m.title}
                       </h4>
                       <div className="font-mono-code text-[10px] text-[#777777] flex items-center justify-between">
-                        <span>CREATED: {new Date(m.createdAt).toLocaleDateString()}</span>
+                        <span>CREATED: {new Date(m.createdAt).toLocaleDateString("en-GB")}</span>
                         <span>{m.downloads || 0} EXPORTS</span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => openEditMemeModal(m)}
-                      className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
-                      title="Edit meme details"
-                    >
-                      <Edit3 className="w-3 h-3 text-[#10B981]" />
-                      <span>EDIT</span>
-                    </button>
+                    {/* Actions (EDIT, PNG, DELETE) */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => openEditMemeModal(m)}
+                        className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+                        title="Edit meme details"
+                      >
+                        <Edit3 className="w-3 h-3 text-[#10B981]" />
+                        <span>EDIT</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleDownload(m.previewUrl || "", m.title)}
-                      className="py-1.5 px-2 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white uppercase text-center flex items-center justify-center gap-1 transition-colors"
-                      title="Download watermark-free PNG"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>PNG</span>
-                    </button>
+                      <button
+                        onClick={() => handleDownload(m.previewUrl || "", m.title)}
+                        className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] text-black uppercase text-center flex items-center justify-center gap-1 transition-colors"
+                        title="Download clean PNG"
+                      >
+                        <Download className="w-3 h-3 text-black" />
+                        <span>PNG</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleDeleteMeme(m.id, m.title)}
-                      className="py-1.5 px-2 bg-[#FFF1F2] text-[#E11D48] border border-[#E11D48] hover:bg-[#E11D48] hover:text-white uppercase text-center flex items-center justify-center gap-1 transition-colors"
-                      title="Delete meme"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>DELETE</span>
-                    </button>
+                      <button
+                        onClick={() => handleDeleteMeme(m.id, m.title)}
+                        className="py-1.5 px-2 bg-white text-[#E11D48] border border-[#E11D48] hover:bg-[#FFF1F2] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+                        title="Delete meme"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>DELETE</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
