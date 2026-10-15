@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Space_Grotesk, Space_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import OuterMetadata from "@/components/layout/OuterMetadata";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PageTransition from "@/components/layout/PageTransition";
+import HydrationFix from "@/components/layout/HydrationFix";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -52,10 +53,18 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${spaceMono.variable} ${inter.variable}`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var o=Element.prototype.setAttribute;Element.prototype.setAttribute=function(n,v){if(n==='bis_skin_checked'||(typeof n==='string'&&n.indexOf('bis_')===0))return;return o.apply(this,arguments);};}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
         suppressHydrationWarning
         className="min-h-screen bg-[#E6E4DC] text-black font-body selection:bg-black selection:text-white antialiased"
       >
+        <HydrationFix />
         {/* Outer Frame with desktop insets: p-2 sm:p-5 md:p-8 */}
         <div suppressHydrationWarning className="min-h-screen p-2 sm:p-5 md:p-8 flex flex-col justify-between">
           <div suppressHydrationWarning className="w-full max-w-[1540px] mx-auto flex flex-col flex-1 bg-[#FAF9F5] border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -81,3 +90,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -90,17 +90,52 @@ export default function ProfilePage() {
     initUser();
   }, []);
 
-  // 2. Fetch User Memes
+  // 2. Fetch User Memes & Uploaded Templates
   const loadUserMemes = async (email: string) => {
     setIsMemesLoading(true);
     try {
-      const res = await fetch(`/api/memes?authorEmail=${encodeURIComponent(email)}&limit=50`);
-      if (res.ok) {
-        const data = await res.json();
-        setMemes(data.data.memes || []);
+      const normalizedEmail = email.toLowerCase().trim();
+      const [memesRes, templatesRes] = await Promise.all([
+        fetch(`/api/memes?authorEmail=${encodeURIComponent(normalizedEmail)}&limit=50`),
+        fetch(`/api/templates?category=all&limit=100`),
+      ]);
+
+      const items: UserMeme[] = [];
+
+      if (memesRes.ok) {
+        const memesData = await memesRes.json();
+        if (memesData.data?.memes) {
+          items.push(...memesData.data.memes);
+        }
       }
+
+      if (templatesRes.ok) {
+        const tplData = await templatesRes.json();
+        const allTpls = tplData.data?.templates || [];
+        const userTpls = allTpls.filter((t: any) => {
+          const tEmail = (t.authorEmail || '').toLowerCase().trim();
+          const tagAuthor = (t.tags || []).find((tag: string) => tag.startsWith('author:'))?.replace('author:', '').toLowerCase().trim();
+          return tEmail === normalizedEmail || tagAuthor === normalizedEmail;
+        });
+
+        userTpls.forEach((t: any) => {
+          if (!items.some((m) => m.id === t.id || m.title.toUpperCase() === t.title.toUpperCase())) {
+            items.push({
+              id: t.id,
+              title: t.title,
+              previewUrl: t.svgDataUri || t.originalUrl,
+              downloads: t.downloadCount || t.remixCount || 0,
+              likes: Math.round((t.remixCount || 100) * 0.4),
+              createdAt: t.createdAt || new Date().toISOString(),
+              templateId: t.slug || t.id,
+            });
+          }
+        });
+      }
+
+      setMemes(items);
     } catch (err) {
-      console.error("Failed to load user memes:", err);
+      console.error("Failed to load user creations:", err);
     } finally {
       setIsMemesLoading(false);
     }
@@ -212,26 +247,38 @@ export default function ProfilePage() {
 
     setIsUpdatingMeme(true);
     try {
-      const res = await fetch("/api/memes", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingMeme.id,
-          title: editMemeTitle.trim().toUpperCase(),
-          authorEmail: user.email,
-        }),
-      });
+      const newTitle = editMemeTitle.trim().toUpperCase();
 
-      if (res.ok) {
+      const [tplRes, memeRes] = await Promise.all([
+        fetch("/api/templates", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingMeme.id,
+            title: newTitle,
+            authorEmail: user.email,
+          }),
+        }).catch(() => null),
+        fetch("/api/memes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingMeme.id,
+            title: newTitle,
+            authorEmail: user.email,
+          }),
+        }).catch(() => null),
+      ]);
+
+      if ((tplRes && tplRes.ok) || (memeRes && memeRes.ok)) {
         setMemes((prev) =>
           prev.map((m) =>
-            m.id === editingMeme.id ? { ...m, title: editMemeTitle.trim().toUpperCase() } : m
+            m.id === editingMeme.id ? { ...m, title: newTitle } : m
           )
         );
         setEditingMeme(null);
       } else {
-        const data = await res.json().catch(() => ({}));
-        alert(`Failed to update meme: ${data.message || "Permission denied"}`);
+        alert("Failed to update title. Please ensure you are the original author.");
       }
     } catch (err) {
       alert("Network error updating meme.");
@@ -380,7 +427,7 @@ export default function ProfilePage() {
 
           {/* Quick Action */}
           <Link
-            href="/editor"
+            href="/edit"
             className="px-6 py-3 bg-black text-white hover:bg-[#333333] font-mono-code text-xs uppercase font-bold tracking-wider transition-colors flex items-center justify-center gap-2 border border-black shadow-[2px_2px_0px_0px_rgba(225,29,72,1)]"
           >
             <Wand2 className="w-4 h-4 text-[#E11D48]" />
@@ -581,7 +628,7 @@ export default function ProfilePage() {
                 Use the upload box above to upload a meme, or open the Canvas Editor to make a watermark-free meme!
               </p>
               <Link
-                href="/editor"
+                href="/edit"
                 className="inline-block px-6 py-2.5 bg-black text-white hover:bg-[#333333] font-bold uppercase transition-colors"
               >
                 OPEN MEME CANVAS EDITOR →
@@ -709,7 +756,7 @@ export default function ProfilePage() {
               {/* Actions */}
               <div className="border-t border-black pt-4 flex items-center justify-between">
                 <Link
-                  href={editingMeme.templateId ? `/edit/${editingMeme.templateId}` : `/editor`}
+                  href={editingMeme.templateId ? `/edit/${editingMeme.templateId}` : `/edit`}
                   className="px-3 py-2 bg-white border border-black hover:bg-[#E6E4DC] uppercase font-bold text-[10px] flex items-center gap-1"
                 >
                   <Wand2 className="w-3 h-3 text-[#E11D48]" />

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 
@@ -14,11 +14,7 @@ export default function MemeCardSkeleton({ count = 8 }: MemeCardSkeletonProps) {
           key={index}
           className="flex flex-col justify-between bg-white border-r border-b border-black select-none"
         >
-          {/* Top Metadata Row Skeleton */}
-          <div className="flex items-center justify-between border-b border-black/15 px-3 py-2 font-mono-code text-[11px] bg-[#FAF9F5]">
-            <div className="h-3 w-16 bg-black/15 animate-pulse" />
-            <div className="h-3 w-20 bg-[#E11D48]/20 animate-pulse" />
-          </div>
+
 
           {/* Visual Preview Aspect Square with Shimmer Effect */}
           <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center animate-shimmer border-b border-black/10">
@@ -50,3 +46,4 @@ export default function MemeCardSkeleton({ count = 8 }: MemeCardSkeletonProps) {
     </div>
   );
 }
+

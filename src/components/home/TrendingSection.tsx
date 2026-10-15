@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -122,15 +122,7 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                 key={item.id}
                 className="group flex flex-col justify-between bg-white hover:bg-[#F6F5EE] transition-colors relative"
               >
-                {/* Minimal Top Metadata */}
-                <div className="flex items-center justify-between border-b border-black/15 px-3 py-1.5 font-mono-code text-[11px] bg-[#FAF9F5]">
-                  <span className="font-bold text-[#E11D48]">
-                    #{scrollIndex + idx + 1}
-                  </span>
-                  <span className="text-[#666666] uppercase text-[10px]">
-                    {item.categoryName}
-                  </span>
-                </div>
+
 
                 {/* Template Preview - Full bleed meme (Zero whitespace around) */}
                 <div className="w-full aspect-square relative overflow-hidden bg-black/5 flex items-center justify-center">
@@ -164,3 +156,4 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
     </section>
   );
 }
+

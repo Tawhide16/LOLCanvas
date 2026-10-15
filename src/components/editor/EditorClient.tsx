@@ -153,6 +153,66 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
     };
   }, []);
 
+  // Dynamically load custom or uploaded templates by id or slug
+  useEffect(() => {
+    if (!templateSlug) return;
+
+    const found = TEMPLATES.find((t) => t.slug === templateSlug || t.id === templateSlug);
+    if (found) {
+      setCurrentTemplate(found);
+      setActivePresetName(found.title);
+      setCanvasWidth(found.width || 1080);
+      setCanvasHeight(found.height || 1080);
+      setCustomBgImage(null);
+      return;
+    }
+
+    async function fetchCustomTemplate() {
+      try {
+        const res = await fetch(`/api/templates?id=${encodeURIComponent(templateSlug || '')}`);
+        if (res.ok) {
+          const json = await res.json();
+          const tpl = json.data;
+          if (tpl) {
+            const bg = tpl.originalUrl || tpl.svgDataUri;
+            const customTpl: Template = {
+              id: tpl.id,
+              slug: tpl.slug || tpl.id,
+              index: "№ 0000",
+              title: tpl.title || "CUSTOM MEME",
+              categoryId: tpl.category || "classic",
+              categoryName: (tpl.category || "classic").toUpperCase(),
+              format: "classic",
+              formatLabel: "Custom Format",
+              remixCount: tpl.downloads || 100,
+              downloadCount: tpl.downloads || 50,
+              createdAt: tpl.createdAt || new Date().toISOString(),
+              source: "Community Upload",
+              license: "Free to remix",
+              aspectRatio: `${tpl.width || 1080}:${tpl.height || 1080}`,
+              width: tpl.width || 1080,
+              height: tpl.height || 1080,
+              defaultTopText: tpl.defaultTopText || "",
+              defaultBottomText: tpl.defaultBottomText || "",
+              svgDataUri: tpl.svgDataUri || bg,
+              originalUrl: tpl.originalUrl || bg,
+              isWatermarkFree: true,
+              tags: tpl.tags || [],
+            };
+            setCurrentTemplate(customTpl);
+            setCustomBgImage(bg);
+            setActivePresetName(customTpl.title);
+            if (tpl.width) setCanvasWidth(tpl.width);
+            if (tpl.height) setCanvasHeight(tpl.height);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load custom template:", e);
+      }
+    }
+    fetchCustomTemplate();
+  }, [templateSlug]);
+
   const pushHistory = (newLayers: CanvasLayer[]) => {
     const sliced = history.slice(0, historyIndex + 1);
     setHistory([...sliced, newLayers]);

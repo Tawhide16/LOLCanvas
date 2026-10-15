@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Compass, Scale } from "lucide-react";
 
 export default function AboutPage() {
@@ -40,9 +40,7 @@ export default function AboutPage() {
             <span className="font-mono-code text-[10px] uppercase text-[#888888]">
               CORE PRINCIPLE
             </span>
-            <blockquote className="font-display font-extrabold text-xl uppercase tracking-tight">
-              “GOOD MEMES AREN’T JUST FUNNY. THEY ARE CULTURE.”
-            </blockquote>
+            <blockquote className="font-display font-extrabold text-xl uppercase tracking-tight">"GOOD MEMES AREN'T JUST FUNNY. THEY ARE CULTURE."</blockquote>
           </div>
         </div>
 
@@ -86,3 +84,4 @@ export default function AboutPage() {
     </div>
   );
 }
+
