@@ -120,30 +120,30 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
             {visibleItems.map((item, idx) => (
               <article
                 key={item.id}
-                className="group bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative"
+                className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden relative"
               >
-                <div className="space-y-3">
-                  {/* Framed Image Preview matching screenshot */}
-                  <Link
-                    href={`/edit/${item.slug}`}
-                    onClick={() => {
-                      try {
-                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
-                        if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
-                      } catch (e) {}
-                    }}
-                    className="bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center aspect-square relative overflow-hidden block cursor-pointer group-hover:border-black transition-colors"
-                  >
-                    <img
-                      src={item.svgDataUri}
-                      alt={item.title}
-                      loading="eager"
-                      decoding="async"
-                      className="w-auto h-auto max-w-full max-h-[210px] object-contain block group-hover:scale-105 transition-all duration-300"
-                    />
-                  </Link>
+                {/* Full-bleed Top Image */}
+                <Link
+                  href={`/edit/${item.slug}`}
+                  onClick={() => {
+                    try {
+                      sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                      if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                    } catch (e) {}
+                  }}
+                  className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block cursor-pointer border-b border-black"
+                >
+                  <img
+                    src={item.svgDataUri}
+                    alt={item.title}
+                    loading="eager"
+                    decoding="async"
+                    className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
+                  />
+                </Link>
 
-                  {/* Title & Metadata */}
+                {/* Bottom Content with padding */}
+                <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
                   <div className="space-y-1">
                     <h3 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
                       {item.title}
@@ -153,23 +153,22 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                       <span>{item.downloadCount || item.remixCount || 0} EXPORTS</span>
                     </div>
                   </div>
-                </div>
 
-                {/* Remix Button */}
-                <div className="pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
-                  <Link
-                    href={`/edit/${item.slug}`}
-                    onClick={() => {
-                      try {
-                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
-                        if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
-                      } catch (e) {}
-                    }}
-                    className="w-full py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <Edit3 className="w-3 h-3 text-[#10B981]" />
-                    <span>EDIT IN CANVAS</span>
-                  </Link>
+                  <div className="pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
+                    <Link
+                      href={`/edit/${item.slug}`}
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                          if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                        } catch (e) {}
+                      }}
+                      className="w-full py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Edit3 className="w-3 h-3 text-[#10B981]" />
+                      <span>EDIT IN CANVAS</span>
+                    </Link>
+                  </div>
                 </div>
               </article>
             ))}

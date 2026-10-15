@@ -106,55 +106,56 @@ export default function MemeCard({
   const exportCount = template.downloadCount || template.remixCount || 0;
 
   return (
-    <article className="group bg-white border border-black p-4 space-y-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-      <div className="space-y-3">
-        {/* Visual Preview Container matching the exact screenshot design */}
-        <Link
-          href={`/edit/${template.slug || template.id}`}
-          onClick={() => {
-            try {
-              sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
-              if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
-              if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
-            } catch (e) {}
-          }}
-          className="bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center min-h-[220px] aspect-square relative overflow-hidden block cursor-pointer group-hover:border-black transition-colors"
-          title="Open in Canvas Editor"
-        >
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
-              <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
-                MEME
-              </div>
+    <article className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+      {/* 1. Full-bleed Image taking the whole top of the card without padding */}
+      <Link
+        href={`/edit/${template.slug || template.id}`}
+        onClick={() => {
+          try {
+            sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+            if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+            if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+          } catch (e) {}
+        }}
+        className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block cursor-pointer border-b border-black"
+        title="Open in Canvas Editor"
+      >
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
+            <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
+              MEME
             </div>
-          )}
-          <img
-            src={template.svgDataUri}
-            alt={template.title}
-            loading="eager"
-            decoding="async"
-            onLoad={() => setImageLoaded(true)}
-            className="w-auto h-auto max-w-full max-h-[210px] object-contain block group-hover:scale-105 transition-all duration-300 relative z-1"
-          />
+          </div>
+        )}
+        <img
+          src={template.svgDataUri}
+          alt={template.title}
+          loading="eager"
+          decoding="async"
+          onLoad={() => setImageLoaded(true)}
+          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
+        />
 
-          {onPreview && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onPreview(template);
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
-              title="Inspect"
-              aria-label="Inspect template"
-            >
-              <Eye className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </Link>
+        {onPreview && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onPreview(template);
+            }}
+            className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
+            title="Inspect"
+            aria-label="Inspect template"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </Link>
 
-        {/* Title and Metadata Line matching the screenshot */}
+      {/* 2. Bottom Content Section with padding */}
+      <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
+        {/* Title and Metadata Line */}
         <div className="space-y-1">
           <h3 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
             {template.title}
@@ -164,66 +165,66 @@ export default function MemeCard({
             <span>{exportCount} EXPORTS</span>
           </div>
         </div>
-      </div>
 
-      {/* Action Buttons matching the screenshot (EDIT, PNG, DELETE) */}
-      <div
-        className={`pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold ${
-          canDelete ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-2"
-        }`}
-      >
-        <Link
-          href={`/edit/${template.slug || template.id}`}
-          onClick={() => {
-            try {
-              sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
-              if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
-              if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
-            } catch (e) {}
-          }}
-          className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
-          title="Edit this meme in Canvas Editor"
+        {/* Action Buttons (EDIT, PNG, DELETE) */}
+        <div
+          className={`pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold ${
+            canDelete ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-2"
+          }`}
         >
-          <Edit3 className="w-3 h-3 text-[#10B981]" />
-          <span>EDIT</span>
-        </Link>
-
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] text-black uppercase text-center flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
-          title="Download clean PNG"
-        >
-          {downloadSuccess ? (
-            <>
-              <Check className="w-3 h-3 text-[#10B981]" />
-              <span>SAVED</span>
-            </>
-          ) : downloading ? (
-            <span>...</span>
-          ) : (
-            <>
-              <Download className="w-3 h-3 text-black" />
-              <span>PNG</span>
-            </>
-          )}
-        </button>
-
-        {canDelete && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete!(template.id || template.slug, template.title);
+          <Link
+            href={`/edit/${template.slug || template.id}`}
+            onClick={() => {
+              try {
+                sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+                if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+                if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+              } catch (e) {}
             }}
-            className="py-1.5 px-2 bg-white text-[#E11D48] border border-[#E11D48] hover:bg-[#FFF1F2] uppercase text-center flex items-center justify-center gap-1 transition-colors"
-            title="Delete this meme card"
+            className="py-1.5 px-2 bg-black text-white hover:bg-[#333333] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+            title="Edit this meme in Canvas Editor"
           >
-            <Trash2 className="w-3 h-3" />
-            <span>DELETE</span>
+            <Edit3 className="w-3 h-3 text-[#10B981]" />
+            <span>EDIT</span>
+          </Link>
+
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] text-black uppercase text-center flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+            title="Download clean PNG"
+          >
+            {downloadSuccess ? (
+              <>
+                <Check className="w-3 h-3 text-[#10B981]" />
+                <span>SAVED</span>
+              </>
+            ) : downloading ? (
+              <span>...</span>
+            ) : (
+              <>
+                <Download className="w-3 h-3 text-black" />
+                <span>PNG</span>
+              </>
+            )}
           </button>
-        )}
+
+          {canDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete!(template.id || template.slug, template.title);
+              }}
+              className="py-1.5 px-2 bg-white text-[#E11D48] border border-[#E11D48] hover:bg-[#FFF1F2] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+              title="Delete this meme card"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>DELETE</span>
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
