@@ -17,7 +17,8 @@ param(
     [switch]$RunOnce
 )
 
-$ErrorActionPreference = "Stop"
+# Do not halt native commands on standard progress stderr
+$ErrorActionPreference = "Continue"
 
 # Determine Git Repository Root
 $repoDir = $PSScriptRoot
@@ -100,7 +101,12 @@ function Wait-UntilWorkingHours {
         }
         $remaining = [math]::Round(($resumeTime - $now).TotalMinutes)
         Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Outside active working hours ($("{0:D2}:00" -f $StartHour) - $("{0:D2}:{1:D2}" -f $EndHour, $EndMinute)). Resting for ~$remaining mins until $("{0:yyyy-MM-dd HH:mm}" -f $resumeTime)..." -ForegroundColor DarkGray
-        Start-Sleep -Seconds 60
+        
+        # Sleep in 5-second intervals so user can interrupt with Ctrl+C
+        for ($i = 0; $i -lt 12; $i++) {
+            Start-Sleep -Seconds 5
+            if (Is-WithinWorkingHours) { break }
+        }
     }
 }
 
@@ -130,15 +136,15 @@ function Do-CommitAndPush {
         return $false
     }
 
-    $commitOutput = git commit -m "$($entry.Message)" 2>&1
+    git commit -m "$($entry.Message)" | Out-Null
     Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Committed: $($entry.Message)" -ForegroundColor Green
 
-    $pushOutput = git push origin main 2>&1
+    git push origin main
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Successfully pushed to origin/main." -ForegroundColor Cyan
         return $true
     } else {
-        Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Push failed: $pushOutput" -ForegroundColor Red
+        Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] Push encountered code $LASTEXITCODE." -ForegroundColor Red
         return $false
     }
 }
