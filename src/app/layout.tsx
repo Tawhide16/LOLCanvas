@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Space_Grotesk, Space_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import OuterMetadata from "@/components/layout/OuterMetadata";
@@ -56,7 +56,52 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var o=Element.prototype.setAttribute;Element.prototype.setAttribute=function(n,v){if(n==='bis_skin_checked'||(typeof n==='string'&&n.indexOf('bis_')===0))return;return o.apply(this,arguments);};}catch(e){}})();`,
+            __html: `(function(){
+              try {
+                // 1. Prevent bis_skin_checked hydration mismatch
+                var o = Element.prototype.setAttribute;
+                Element.prototype.setAttribute = function(n, v) {
+                  if (n === 'bis_skin_checked' || (typeof n === 'string' && n.indexOf('bis_') === 0)) return;
+                  return o.apply(this, arguments);
+                };
+
+                // 2. Early capture to block Chrome extensions (e.g. M_ID in 200.js) from triggering Next.js overlay
+                window.addEventListener('error', function(e) {
+                  var fn = e.filename || '';
+                  var st = (e.error && e.error.stack) ? e.error.stack : '';
+                  var msg = e.message || '';
+                  var combo = fn + ' ' + st + ' ' + msg;
+                  if (
+                    combo.indexOf('chrome-extension://') !== -1 ||
+                    combo.indexOf('moz-extension://') !== -1 ||
+                    combo.indexOf('safari-extension://') !== -1 ||
+                    combo.indexOf('M_ID') !== -1 ||
+                    combo.indexOf('bis_skin_checked') !== -1 ||
+                    combo.indexOf('executors/200.js') !== -1
+                  ) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    return true;
+                  }
+                }, true);
+
+                window.addEventListener('unhandledrejection', function(e) {
+                  var r = e.reason;
+                  var st = (r && r.stack) ? r.stack : '';
+                  var msg = (r && r.message) ? r.message : String(r || '');
+                  var combo = st + ' ' + msg;
+                  if (
+                    combo.indexOf('chrome-extension://') !== -1 ||
+                    combo.indexOf('moz-extension://') !== -1 ||
+                    combo.indexOf('M_ID') !== -1 ||
+                    combo.indexOf('executors/200.js') !== -1
+                  ) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                  }
+                }, true);
+              } catch(err) {}
+            })();`,
           }}
         />
       </head>

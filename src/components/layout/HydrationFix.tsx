@@ -14,8 +14,12 @@ if (typeof window !== 'undefined') {
         filename.includes('chrome-extension://') ||
         filename.includes('moz-extension://') ||
         filename.includes('safari-extension://') ||
+        filename.includes('eppiocemhmnlbhjplcgkofciiegomcon') ||
+        filename.includes('executors/200.js') ||
         stack.includes('chrome-extension://') ||
         stack.includes('moz-extension://') ||
+        stack.includes('eppiocemhmnlbhjplcgkofciiegomcon') ||
+        stack.includes('executors/200.js') ||
         message.includes('M_ID') ||
         message.includes('bis_skin_checked')
       ) {
@@ -37,6 +41,8 @@ if (typeof window !== 'undefined') {
       if (
         stack.includes('chrome-extension://') ||
         stack.includes('moz-extension://') ||
+        stack.includes('eppiocemhmnlbhjplcgkofciiegomcon') ||
+        stack.includes('executors/200.js') ||
         message.includes('M_ID') ||
         message.includes('bis_skin_checked')
       ) {
