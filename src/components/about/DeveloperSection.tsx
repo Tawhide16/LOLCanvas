@@ -72,11 +72,12 @@ export default function DeveloperSection() {
   const [editName, setEditName] = useState(DEFAULT_PROFILE.name);
   const [editBio, setEditBio] = useState(DEFAULT_PROFILE.bio);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // 1. Read persistent developer profile if custom image was uploaded
+    // 1. Read local cache for immediate render
     try {
       const stored = localStorage.getItem("lolcanvas_developer_profile");
       if (stored) {
@@ -88,7 +89,26 @@ export default function DeveloperSection() {
       }
     } catch (e) {}
 
-    // 2. Evaluate Super Admin status
+    // 2. Fetch persistent profile from Database API so ALL ROLES & GUESTS see it!
+    fetch("/api/admin/site-config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.developerProfile) {
+          setProfile((prev) => ({ ...prev, ...data.data.developerProfile }));
+          setEditAvatarUrl(data.data.developerProfile.avatarUrl || DEFAULT_PROFILE.avatarUrl);
+          setEditName(data.data.developerProfile.name || DEFAULT_PROFILE.name);
+          setEditBio(data.data.developerProfile.bio || DEFAULT_PROFILE.bio);
+          try {
+            localStorage.setItem(
+              "lolcanvas_developer_profile",
+              JSON.stringify(data.data.developerProfile)
+            );
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
+
+    // 3. Evaluate Super Admin status
     const evaluateAdmin = (email: string | null, role?: string | null) => {
       if (!email) return false;
       if (email.toLowerCase() === "admin123@gmail.com") return true;
@@ -98,6 +118,7 @@ export default function DeveloperSection() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email);
         const role = (session.user.app_metadata?.role || session.user.user_metadata?.role) as string;
         setIsAdmin(evaluateAdmin(session.user.email, role));
       } else if (typeof window !== "undefined") {
@@ -105,11 +126,23 @@ export default function DeveloperSection() {
           const local = localStorage.getItem("lolcanvas_user");
           if (local) {
             const parsed = JSON.parse(local);
+            if (parsed.email) setCurrentUserEmail(parsed.email);
             setIsAdmin(evaluateAdmin(parsed.email, parsed.role));
           }
         } catch (e) {}
       }
     });
+
+    const handleConfigChange = (e: any) => {
+      if (e.detail?.developerProfile) {
+        setProfile((prev) => ({ ...prev, ...e.detail.developerProfile }));
+      }
+    };
+    window.addEventListener("lolcanvas_site_config_changed", handleConfigChange);
+
+    return () => {
+      window.removeEventListener("lolcanvas_site_config_changed", handleConfigChange);
+    };
   }, []);
 
   const handleImageFileChange = async (file: File) => {
@@ -132,7 +165,7 @@ export default function DeveloperSection() {
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
@@ -143,11 +176,31 @@ export default function DeveloperSection() {
       bio: editBio.trim() || DEFAULT_PROFILE.bio,
     };
 
+    // 1. Optimistic update
+    setProfile(updatedProfile);
     try {
       localStorage.setItem("lolcanvas_developer_profile", JSON.stringify(updatedProfile));
+      window.dispatchEvent(
+        new CustomEvent("lolcanvas_site_config_changed", {
+          detail: { developerProfile: updatedProfile },
+        })
+      );
     } catch (e) {}
 
-    setProfile(updatedProfile);
+    // 2. Persist to PostgreSQL backend DB so ALL ROLES and ALL BROWSERS see it!
+    try {
+      await fetch("/api/admin/site-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          developerProfile: updatedProfile,
+          adminEmail: currentUserEmail || "admin123@gmail.com",
+        }),
+      });
+    } catch (err) {
+      console.warn("Could not persist to server DB:", err);
+    }
+
     setIsSaving(false);
     setShowEditModal(false);
   };
