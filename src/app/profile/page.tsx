@@ -21,6 +21,7 @@ import {
   Edit3,
   X,
   Loader2,
+  Bookmark,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -39,6 +40,8 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [memes, setMemes] = useState<UserMeme[]>([]);
   const [isMemesLoading, setIsMemesLoading] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"creations" | "saved">("creations");
 
   // Upload widget state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -90,7 +93,47 @@ export default function ProfilePage() {
     }
 
     initUser();
+
+    // Load saved templates from localStorage
+    const loadSaved = () => {
+      try {
+        const stored = localStorage.getItem("lolcanvas_saved_templates");
+        if (stored) {
+          setSavedTemplates(JSON.parse(stored));
+        } else {
+          setSavedTemplates([]);
+        }
+      } catch (e) {}
+    };
+
+    loadSaved();
+    const handleSavedChange = () => loadSaved();
+    window.addEventListener("lolcanvas_saved_templates_changed", handleSavedChange);
+
+    return () => {
+      window.removeEventListener("lolcanvas_saved_templates_changed", handleSavedChange);
+    };
   }, []);
+
+  const handleRemoveSaved = (idOrSlug: string, title: string) => {
+    try {
+      const stored = localStorage.getItem("lolcanvas_saved_templates");
+      let list = stored ? JSON.parse(stored) : [];
+      list = list.filter(
+        (t: any) =>
+          t.id !== idOrSlug &&
+          t.slug !== idOrSlug &&
+          t.title.toUpperCase() !== title.toUpperCase()
+      );
+      localStorage.setItem("lolcanvas_saved_templates", JSON.stringify(list));
+      setSavedTemplates(list);
+      window.dispatchEvent(
+        new CustomEvent("lolcanvas_saved_templates_changed", {
+          detail: { idOrSlug, isSaved: false },
+        })
+      );
+    } catch (e) {}
+  };
 
   // 2. Fetch User Memes & Uploaded Templates
   const loadUserMemes = async (email: string) => {
@@ -459,11 +502,31 @@ export default function ProfilePage() {
 
         {/* 3 Metric Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 border border-black divide-y sm:divide-y-0 sm:divide-x divide-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <div className="p-6 space-y-1">
+          <div
+            onClick={() => setActiveTab("creations")}
+            className={`p-6 space-y-1 cursor-pointer transition-colors ${
+              activeTab === "creations" ? "bg-[#FAF9F5]" : "hover:bg-[#F6F5EE]"
+            }`}
+          >
             <span className="font-mono-code text-[11px] text-[#777777] uppercase block">
-              SAVED MEMES IN PROFILE
+              MY CREATIONS & UPLOADS
             </span>
             <span className="font-display font-black text-3xl text-black">{memes.length}</span>
+          </div>
+
+          <div
+            onClick={() => setActiveTab("saved")}
+            className={`p-6 space-y-1 cursor-pointer transition-colors ${
+              activeTab === "saved" ? "bg-[#FAF9F5]" : "hover:bg-[#F6F5EE]"
+            }`}
+          >
+            <span className="font-mono-code text-[11px] text-[#777777] uppercase flex items-center justify-between">
+              <span>SAVED TEMPLATES (BOOKMARKS)</span>
+              <Bookmark className="w-3.5 h-3.5 text-[#E11D48]" />
+            </span>
+            <span className="font-display font-black text-3xl text-[#E11D48]">
+              {savedTemplates.length}
+            </span>
           </div>
 
           <div className="p-6 space-y-1">
@@ -472,15 +535,6 @@ export default function ProfilePage() {
             </span>
             <span className="font-display font-black text-3xl text-black">
               {memes.reduce((acc, m) => acc + (m.downloads || 0), 0)}
-            </span>
-          </div>
-
-          <div className="p-6 space-y-1">
-            <span className="font-mono-code text-[11px] text-[#777777] uppercase block">
-              COMMUNITY LIKES
-            </span>
-            <span className="font-display font-black text-3xl text-[#E11D48]">
-              {memes.reduce((acc, m) => acc + (m.likes || 0), 0)}
             </span>
           </div>
         </div>
@@ -615,27 +669,49 @@ export default function ProfilePage() {
         </div>
 
         {/* ============================================================== */}
-        {/* MY SAVED MEMES GALLERY                                         */}
+        {/* GALLERY TABS: CREATIONS & SAVED TEMPLATES                     */}
         {/* ============================================================== */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-black pb-3">
-            <div>
-              <h3 className="font-display font-extrabold text-2xl uppercase tracking-tight text-black">
-                MY SAVED MEMES & CREATIONS ({memes.length})
-              </h3>
-              <p className="font-mono-code text-xs text-[#777777]">
-                All creations saved from Canvas Editor or uploaded from your profile.
-              </p>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-black gap-4 pb-3">
+            <div className="flex items-center gap-2 font-mono-code text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setActiveTab("creations")}
+                className={`px-4 py-2 uppercase border border-black transition-all ${
+                  activeTab === "creations"
+                    ? "bg-black text-white shadow-[2px_2px_0px_0px_rgba(225,29,72,1)]"
+                    : "bg-white text-black hover:bg-[#FAF9F5]"
+                }`}
+              >
+                MY CREATIONS & UPLOADS ({memes.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("saved")}
+                className={`px-4 py-2 uppercase border border-black transition-all flex items-center gap-1.5 ${
+                  activeTab === "saved"
+                    ? "bg-black text-white shadow-[2px_2px_0px_0px_rgba(225,29,72,1)]"
+                    : "bg-white text-black hover:bg-[#FAF9F5]"
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5 text-[#E11D48]" />
+                <span>SAVED TEMPLATES ({savedTemplates.length})</span>
+              </button>
             </div>
 
             <Link
               href="/cards"
-              className="font-mono-code text-xs font-bold uppercase text-black hover:text-[#E11D48] flex items-center gap-1"
+              className="font-mono-code text-xs font-bold uppercase text-black hover:text-[#E11D48] flex items-center gap-1 shrink-0"
             >
               <span>BROWSE ALL TEMPLATES</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+
+          {/* 1. CREATIONS TAB CONTENT */}
+          {activeTab === "creations" && (
+            <div>
 
           {isMemesLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -749,7 +825,128 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* 2. SAVED TEMPLATES TAB CONTENT */}
+      {activeTab === "saved" && (
+        <div>
+          {savedTemplates.length === 0 ? (
+            <div className="p-16 text-center font-mono-code text-xs bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4">
+              <div className="text-4xl">🔖</div>
+              <div className="font-display font-bold text-lg uppercase text-black">
+                NO SAVED TEMPLATES YET!
+              </div>
+              <p className="text-[#777777] max-w-md mx-auto">
+                Browse the meme archive and click the bookmark icon on the top-right corner of any template to save it here for quick access!
+              </p>
+              <Link
+                href="/cards"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white hover:bg-[#E11D48] font-bold uppercase transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                <span>BROWSE & SAVE TEMPLATES</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {savedTemplates.map((item) => {
+                const preview = item.svgDataUri || item.originalUrl;
+                const editorLink = `/edit/${encodeURIComponent(item.slug || item.id)}`;
+                return (
+                  <div
+                    key={item.id || item.slug}
+                    className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+                  >
+                    {/* Image Preview with Bookmark active badge */}
+                    <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block border-b border-black">
+                      {preview ? (
+                        <img
+                          src={preview}
+                          alt={item.title}
+                          loading="eager"
+                          decoding="async"
+                          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
+                        />
+                      ) : (
+                        <div className="font-mono-code text-xs text-[#777777]">TEMPLATE</div>
+                      )}
+
+                      {/* Top-Right Active Bookmark / Remove button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveSaved(item.id || item.slug, item.title);
+                        }}
+                        className="absolute top-2.5 right-2.5 z-10 p-2 bg-white text-[#E11D48] border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#FFF1F2] transition-transform active:scale-90"
+                        title="Remove from saved templates"
+                      >
+                        <Bookmark className="w-4 h-4 fill-[#E11D48]" />
+                      </button>
+
+                      {/* Category / Format Badge */}
+                      <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1">
+                        {item.categoryName && (
+                          <span className="font-mono-code text-[10px] font-bold uppercase bg-black text-white px-2 py-0.5 border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                            {item.categoryName}
+                          </span>
+                        )}
+                        {item.format && (
+                          <span className="font-mono-code text-[10px] font-bold uppercase bg-[#FFE600] text-black px-1.5 py-0.5 border border-black">
+                            {item.format}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Content */}
+                    <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
+                      <div className="space-y-1">
+                        <h4 className="font-display font-extrabold text-sm uppercase text-black truncate tracking-tight">
+                          {item.title}
+                        </h4>
+                        <div className="font-mono-code text-[10px] text-[#777777] flex items-center justify-between">
+                          <span>
+                            SAVED:{" "}
+                            {item.savedAt
+                              ? new Date(item.savedAt).toLocaleDateString("en-GB")
+                              : "RECENT"}
+                          </span>
+                          <span className="text-[#10B981] font-bold">READY TO EDIT</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-black/10 font-mono-code text-[11px] font-bold">
+                        <Link
+                          href={editorLink}
+                          className="col-span-2 py-1.5 px-2 bg-black text-white hover:bg-[#E11D48] uppercase text-center flex items-center justify-center gap-1.5 transition-colors"
+                          title="Open in Canvas Editor"
+                        >
+                          <Wand2 className="w-3.5 h-3.5 text-[#FFE600]" />
+                          <span>USE TEMPLATE</span>
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSaved(item.id || item.slug, item.title)}
+                          className="py-1.5 px-2 bg-white text-[#E11D48] border border-[#E11D48] hover:bg-[#FFF1F2] uppercase text-center flex items-center justify-center gap-1 transition-colors"
+                          title="Remove from saved"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>REMOVE</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
 
       {/* Edit Meme Modal */}
       {editingMeme && (

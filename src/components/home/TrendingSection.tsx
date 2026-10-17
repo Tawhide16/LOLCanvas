@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Wand2, Edit3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wand2, Edit3, Bookmark } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TrendingSectionProps {
@@ -16,6 +16,70 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
   });
   const [scrollIndex, setScrollIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  // Track saved templates
+  useEffect(() => {
+    const checkSaved = () => {
+      try {
+        const stored = localStorage.getItem("lolcanvas_saved_templates");
+        if (stored) {
+          const list = JSON.parse(stored);
+          setSavedIds(list.map((t: any) => t.id || t.slug));
+        } else {
+          setSavedIds([]);
+        }
+      } catch (e) {}
+    };
+
+    checkSaved();
+    const handleSavedChange = () => checkSaved();
+    window.addEventListener("lolcanvas_saved_templates_changed", handleSavedChange);
+    return () => {
+      window.removeEventListener("lolcanvas_saved_templates_changed", handleSavedChange);
+    };
+  }, []);
+
+  const handleToggleSaveItem = (e: React.MouseEvent, item: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const stored = localStorage.getItem("lolcanvas_saved_templates");
+      let list = stored ? JSON.parse(stored) : [];
+      const isAlreadySaved = list.some(
+        (t: any) => (t.id && t.id === item.id) || (t.slug && t.slug === item.slug)
+      );
+
+      if (isAlreadySaved) {
+        list = list.filter(
+          (t: any) => t.id !== item.id && t.slug !== item.slug
+        );
+      } else {
+        const toSave = {
+          id: item.id || item.slug,
+          slug: item.slug || item.id,
+          title: item.title,
+          svgDataUri: item.svgDataUri,
+          originalUrl: item.originalUrl || item.svgDataUri,
+          categoryName: item.categoryName || item.categoryId || "CLASSIC",
+          format: item.format || "classic",
+          downloadCount: item.downloadCount || 0,
+          remixCount: item.remixCount || 0,
+          savedAt: new Date().toISOString(),
+        };
+        list = [toSave, ...list];
+      }
+
+      localStorage.setItem("lolcanvas_saved_templates", JSON.stringify(list));
+      setSavedIds(list.map((t: any) => t.id || t.slug));
+      window.dispatchEvent(
+        new CustomEvent("lolcanvas_saved_templates_changed", {
+          detail: { template: item, isSaved: !isAlreadySaved },
+        })
+      );
+    } catch (e) {}
+  };
 
   useEffect(() => {
     // If SSR initialTemplates provided, filter removed templates and avoid duplicate network fetch
@@ -124,25 +188,51 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                 key={item.id}
                 className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden relative"
               >
-                {/* Full-bleed Top Image */}
-                <Link
-                  href={`/edit/${item.slug}`}
-                  onClick={() => {
-                    try {
-                      sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
-                      if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
-                    } catch (e) {}
-                  }}
-                  className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block cursor-pointer border-b border-black"
-                >
-                  <img
-                    src={item.svgDataUri}
-                    alt={item.title}
-                    loading="eager"
-                    decoding="async"
-                    className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
-                  />
-                </Link>
+                {/* Full-bleed Top Image with Bookmark Button */}
+                <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center border-b border-black">
+                  <Link
+                    href={`/edit/${item.slug}`}
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                        if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                      } catch (e) {}
+                    }}
+                    className="w-full h-full relative block cursor-pointer"
+                  >
+                    <img
+                      src={item.svgDataUri}
+                      alt={item.title}
+                      loading="eager"
+                      decoding="async"
+                      className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
+                    />
+                  </Link>
+
+                  {/* Bookmark Button (Top Right Corner) */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleSaveItem(e, item)}
+                    title={
+                      savedIds.includes(item.id) || savedIds.includes(item.slug)
+                        ? "Saved in Profile (Click to remove)"
+                        : "Save template to Profile"
+                    }
+                    className={`absolute top-2.5 right-2.5 z-20 p-2 border border-black transition-all ${
+                      savedIds.includes(item.id) || savedIds.includes(item.slug)
+                        ? "bg-[#E11D48] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
+                        : "bg-white/95 text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105"
+                    }`}
+                  >
+                    <Bookmark
+                      className={`w-3.5 h-3.5 ${
+                        savedIds.includes(item.id) || savedIds.includes(item.slug)
+                          ? "fill-white text-white"
+                          : ""
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* Bottom Content with padding */}
                 <div className="p-4 flex flex-col justify-between space-y-3 bg-white">

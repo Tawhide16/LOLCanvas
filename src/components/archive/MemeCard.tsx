@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Download, Edit3, Eye, Check, Trash2 } from "lucide-react";
+import { Download, Edit3, Eye, Check, Trash2, Bookmark } from "lucide-react";
 import { Template } from "@/types";
 
 interface MemeCardProps {
@@ -24,10 +24,97 @@ export default function MemeCard({
 }: MemeCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const displayImage = template.svgDataUri || (template as any).previewUrl || template.originalUrl || "";
   const [imageLoaded, setImageLoaded] = useState(() => {
     return typeof displayImage === "string" && displayImage.startsWith("data:");
   });
+
+  // Check if this template is bookmarked/saved by user
+  useEffect(() => {
+    const checkSavedStatus = () => {
+      try {
+        const stored = localStorage.getItem("lolcanvas_saved_templates");
+        if (stored) {
+          const list = JSON.parse(stored);
+          const found = list.some(
+            (t: any) =>
+              (t.id && t.id === template.id) ||
+              (t.slug && t.slug === template.slug) ||
+              (t.title && t.title.toUpperCase() === template.title.toUpperCase())
+          );
+          setIsSaved(found);
+        } else {
+          setIsSaved(false);
+        }
+      } catch (e) {}
+    };
+
+    checkSavedStatus();
+    const handleSavedEvent = () => checkSavedStatus();
+    window.addEventListener("lolcanvas_saved_templates_changed", handleSavedEvent);
+    return () => {
+      window.removeEventListener("lolcanvas_saved_templates_changed", handleSavedEvent);
+    };
+  }, [template.id, template.slug, template.title]);
+
+  const handleToggleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const stored = localStorage.getItem("lolcanvas_saved_templates");
+      let list = stored ? JSON.parse(stored) : [];
+      const alreadySaved = list.some(
+        (t: any) =>
+          (t.id && t.id === template.id) ||
+          (t.slug && t.slug === template.slug) ||
+          (t.title && t.title.toUpperCase() === template.title.toUpperCase())
+      );
+
+      if (alreadySaved) {
+        list = list.filter(
+          (t: any) =>
+            t.id !== template.id &&
+            t.slug !== template.slug &&
+            t.title.toUpperCase() !== template.title.toUpperCase()
+        );
+        setIsSaved(false);
+        setToastMessage("REMOVED");
+      } else {
+        const itemToSave = {
+          id: template.id || template.slug,
+          slug: template.slug || template.id,
+          title: template.title,
+          svgDataUri: displayImage,
+          originalUrl: template.originalUrl || displayImage,
+          categoryName: template.categoryName || template.categoryId || "CLASSIC",
+          categoryId: template.categoryId || "classic",
+          format: template.format || "classic",
+          downloadCount: template.downloadCount || 0,
+          remixCount: template.remixCount || 0,
+          authorEmail: template.authorEmail,
+          savedAt: new Date().toISOString(),
+        };
+        list = [itemToSave, ...list];
+        setIsSaved(true);
+        setToastMessage("SAVED ■");
+      }
+
+      localStorage.setItem("lolcanvas_saved_templates", JSON.stringify(list));
+      window.dispatchEvent(
+        new CustomEvent("lolcanvas_saved_templates_changed", {
+          detail: { template, isSaved: !alreadySaved },
+        })
+      );
+
+      setTimeout(() => setToastMessage(null), 1800);
+    } catch (e) {
+      console.warn("Could not save template:", e);
+    }
+  };
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -108,35 +195,60 @@ export default function MemeCard({
 
   return (
     <article className="group bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between transition-all hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-      {/* 1. Full-bleed Image taking the whole top of the card without padding */}
-      <Link
-        href={`/edit/${template.slug || template.id}`}
-        onClick={() => {
-          try {
-            sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
-            if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
-            if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
-          } catch (e) {}
-        }}
-        className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center block cursor-pointer border-b border-black"
-        title="Open in Canvas Editor"
-      >
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
-            <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
-              MEME
+      {/* 1. Full-bleed Image with Top-Right Save Button */}
+      <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center border-b border-black">
+        <Link
+          href={`/edit/${template.slug || template.id}`}
+          onClick={() => {
+            try {
+              sessionStorage.setItem(`lolcanvas_template_${template.slug || template.id}`, JSON.stringify(template));
+              if (template.slug) sessionStorage.setItem(`lolcanvas_template_${template.slug}`, JSON.stringify(template));
+              if (template.id) sessionStorage.setItem(`lolcanvas_template_${template.id}`, JSON.stringify(template));
+            } catch (e) {}
+          }}
+          className="w-full h-full relative block cursor-pointer"
+          title="Open in Canvas Editor"
+        >
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-[#FAF9F5] animate-shimmer flex items-center justify-center z-0">
+              <div className="w-8 h-8 border border-black/10 flex items-center justify-center text-black/25 font-mono-code text-[9px] font-bold animate-pulse">
+                MEME
+              </div>
             </div>
+          )}
+          <img
+            src={displayImage}
+            alt={template.title}
+            loading="eager"
+            decoding="async"
+            onLoad={() => setImageLoaded(true)}
+            className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
+          />
+        </Link>
+
+        {/* Save/Bookmark Button (Top-Right Corner) */}
+        <button
+          type="button"
+          onClick={handleToggleSave}
+          title={isSaved ? "Saved to Profile (Click to remove)" : "Save template to Profile"}
+          aria-label={isSaved ? "Remove saved template" : "Save template to Profile"}
+          className={`absolute top-2.5 right-2.5 z-20 p-2 border border-black transition-all duration-150 flex items-center justify-center ${
+            isSaved
+              ? "bg-[#E11D48] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
+              : "bg-white/95 text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105"
+          }`}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-white text-white" : ""}`} />
+        </button>
+
+        {/* Toast Badge on Save */}
+        {toastMessage && (
+          <div className="absolute top-12 right-2.5 z-30 bg-black text-white px-2 py-0.5 font-mono-code text-[9px] uppercase font-bold border border-black shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] animate-in fade-in duration-100">
+            {toastMessage}
           </div>
         )}
-        <img
-          src={displayImage}
-          alt={template.title}
-          loading="eager"
-          decoding="async"
-          onLoad={() => setImageLoaded(true)}
-          className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
-        />
 
+        {/* Inspect Preview Button (Top-Left Corner) */}
         {onPreview && (
           <button
             type="button"
@@ -145,14 +257,14 @@ export default function MemeCard({
               e.stopPropagation();
               onPreview(template);
             }}
-            className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-1.5 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10"
+            className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white p-2 hover:bg-[#333333] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10 border border-black"
             title="Inspect"
             aria-label="Inspect template"
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
         )}
-      </Link>
+      </div>
 
       {/* 2. Bottom Content Section with padding */}
       <div className="p-4 flex flex-col justify-between space-y-3 bg-white">
