@@ -13,8 +13,29 @@
 
 ---
 
+## 👑 Recruiter & Developer Reviewer Access (Admin Credentials)
+
+> **For Hiring Managers & Code Reviewers**:  
+> To test the **Admin Command Center**, moderation workflows, and **Role-Based Access Control (RBAC)** without manual setup, use the pre-configured credentials below:
+>
+> | Credential / Route | Value |
+> |---|---|
+> | **Login Page** | [`/login`](http://localhost:3002/login) |
+> | **Admin Command Center** | [`/admin`](http://localhost:3002/admin) |
+> | **Admin Email** | `admin123@gmail.com` |
+> | **Admin Password** | `admin123` |
+> | **Assigned Role** | `SUPER_ADMIN` *(Highest Tier: Full System & Audit Access)* |
+>
+> *Seed or reset command:* `node prisma/seed-admin.js`
+
+---
+
 ## ✦ Key Features
 
+- **👑 Role-Based Access Control (RBAC) & Admin Command Center (`/admin`)**:
+  - **4-Tier Permission Architecture**: `CREATOR` → `CURATOR` → `ADMIN` → `SUPER_ADMIN`.
+  - **Full Admin Suite**: Live telemetry & stats, template approval pipeline, user role promotion/suspension, audit trail logging, and meme moderation.
+  - **Immediate Reviewer Access**: Pre-seeded demo credentials (`admin123@gmail.com` / `admin123`) ready for recruiters and technical evaluators.
 - **Full-Screen Immersive Canvas Editor (`100vw × 100vh`)**: Fixed viewport layout without scrollbars, housing a canvas workbench with live zooming, snapping, and undo/redo history.
 - **Multi-Image Overlay & Transformation Engine**:
   - Ingest any image from your computer directly on top of active memes.
@@ -29,7 +50,7 @@
   - **Zod**: Strict runtime data validation for canvas layers, captions, templates, and auth.
   - **Redis Caching**: Sub-millisecond response caching for trending templates and queries.
   - **JWT Authentication**: Stateless authentication with `jose` and HTTP-only secure session cookies.
-  - **RBAC**: Multi-tier role permissions (`CREATOR`, `CURATOR`, `ADMIN`).
+  - **Multi-Tier RBAC**: `CREATOR`, `CURATOR`, `ADMIN`, `SUPER_ADMIN` authorization guards.
   - **Rate Limiting**: Sliding window protection against DDoS, bot scraping, and upload flooding.
 - **Containerized**: Production-ready **Dockerfile** (multi-stage) and **Docker Compose** with local PostgreSQL service.
 
@@ -241,6 +262,7 @@ LOLCanvas/
 | `npm run prisma:push` | Syncs schema with PostgreSQL / Neon / Supabase |
 | `npm run prisma:migrate` | Runs Prisma migration workflow |
 | `npm run prisma:studio` | Launches web UI for database records |
+| `node prisma/seed-admin.js` | Seeds the default Super Admin demo account (`admin123@gmail.com`) |
 
 ---
 
