@@ -209,29 +209,58 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                     />
                   </Link>
 
-                  {/* Bookmark Button (Top Right Corner) */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleSaveItem(e, item)}
-                    title={
-                      savedIds.includes(item.id) || savedIds.includes(item.slug)
-                        ? "Saved in Profile (Click to remove)"
-                        : "Save template to Profile"
-                    }
-                    className={`absolute top-2.5 right-2.5 z-20 p-2 border border-black transition-all ${
-                      savedIds.includes(item.id) || savedIds.includes(item.slug)
-                        ? "bg-[#E11D48] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
-                        : "bg-white/95 text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105"
-                    }`}
-                  >
-                    <Bookmark
-                      className={`w-3.5 h-3.5 ${
-                        savedIds.includes(item.id) || savedIds.includes(item.slug)
-                          ? "fill-white text-white"
-                          : ""
-                      }`}
-                    />
-                  </button>
+                  {/* Bookmark Button (Top Right Corner: Hidden until hover, or Always Visible if already saved) */}
+                  {(() => {
+                    const isSaved = savedIds.includes(item.id) || savedIds.includes(item.slug);
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSaveItem(e, item)}
+                        title={
+                          isSaved
+                            ? "Saved in Profile (Click to remove)"
+                            : "Save template to Profile"
+                        }
+                        aria-label={isSaved ? "Remove saved template" : "Save template to Profile"}
+                        className={`absolute top-2.5 right-2.5 z-20 p-2 border border-black transition-all duration-200 flex items-center justify-center ${
+                          isSaved
+                            ? "opacity-100 bg-[#E11D48] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-100 hover:scale-105"
+                            : "opacity-0 group-hover:opacity-100 bg-white/95 text-black hover:bg-black hover:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-90 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto"
+                        }`}
+                      >
+                        {isSaved ? (
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-3.5 h-3.5"
+                          >
+                            <path
+                              d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V22L12 17.5L5 22V3Z"
+                              stroke="currentColor"
+                              strokeWidth="1.2"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M12 6.5L13.15 8.83L15.72 9.2L13.86 11.01L14.3 13.57L12 12.36L9.7 13.57L10.14 11.01L8.28 9.2L10.85 8.83L12 6.5Z"
+                              fill="#FFFFFF"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="w-3.5 h-3.5"
+                          >
+                            <path d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V22L12 17.5L5 22V3Z" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Bottom Content with padding */}

@@ -878,10 +878,25 @@ export default function ProfilePage() {
                           e.stopPropagation();
                           handleRemoveSaved(item.id || item.slug, item.title);
                         }}
-                        className="absolute top-2.5 right-2.5 z-10 p-2 bg-white text-[#E11D48] border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#FFF1F2] transition-transform active:scale-90"
+                        className="absolute top-2.5 right-2.5 z-10 p-2 bg-[#E11D48] text-white border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform active:scale-95"
                         title="Remove from saved templates"
                       >
-                        <Bookmark className="w-4 h-4 fill-[#E11D48]" />
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-3.5 h-3.5"
+                        >
+                          <path
+                            d="M5 3C5 2.44772 5.44772 2 6 2H18C18.5523 2 19 2.44772 19 3V22L12 17.5L5 22V3Z"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 6.5L13.15 8.83L15.72 9.2L13.86 11.01L14.3 13.57L12 12.36L9.7 13.57L10.14 11.01L8.28 9.2L10.85 8.83L12 6.5Z"
+                            fill="#FFFFFF"
+                          />
+                        </svg>
                       </button>
 
                       {/* Category / Format Badge */}
