@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { CATEGORIES } from "@/lib/data";
 
 interface FilterBarProps {
@@ -21,6 +22,18 @@ export default function FilterBar({
   onFormatChange,
   totalResults,
 }: FilterBarProps) {
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customFormats, setCustomFormats] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const storedCats = localStorage.getItem("lolcanvas_custom_categories");
+      if (storedCats) setCustomCategories(JSON.parse(storedCats));
+      const storedFmts = localStorage.getItem("lolcanvas_custom_formats");
+      if (storedFmts) setCustomFormats(JSON.parse(storedFmts));
+    } catch (e) {}
+  }, []);
+
   return (
     <div className="w-full bg-[#FAF9F5] border-b border-black">
       <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-black font-mono-code text-xs">
@@ -36,11 +49,22 @@ export default function FilterBar({
             className="w-full bg-[#FAF9F5] border border-black/20 focus:border-black p-1.5 font-mono-code text-xs text-black uppercase focus:outline-none cursor-pointer"
           >
             <option value="all">ALL CATEGORIES</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                [{c.number}] {c.name.toUpperCase()}
-              </option>
-            ))}
+            <optgroup label="PRESET CATEGORIES">
+              {CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  [{c.number}] {c.name.toUpperCase()}
+                </option>
+              ))}
+            </optgroup>
+            {customCategories.length > 0 && (
+              <optgroup label="CUSTOM CATEGORIES">
+                {customCategories.map((c) => (
+                  <option key={c} value={c.toLowerCase().replace(/[^a-z0-9]/g, "-")}>
+                    ★ {c.toUpperCase()}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 
@@ -74,9 +98,20 @@ export default function FilterBar({
             className="w-full bg-[#FAF9F5] border border-black/20 focus:border-black p-1.5 font-mono-code text-xs text-black uppercase focus:outline-none cursor-pointer"
           >
             <option value="all">ALL FORMATS</option>
-            <option value="classic">CLASSIC TOP/BOTTOM</option>
-            <option value="multi-panel">MULTI-PANEL</option>
-            <option value="tweet">TWEET / BOX</option>
+            <optgroup label="PRESET FORMATS">
+              <option value="classic">CLASSIC TOP/BOTTOM</option>
+              <option value="multi-panel">MULTI-PANEL</option>
+              <option value="tweet">TWEET / BOX</option>
+            </optgroup>
+            {customFormats.length > 0 && (
+              <optgroup label="CUSTOM FORMATS">
+                {customFormats.map((f) => (
+                  <option key={f} value={f.toLowerCase().replace(/[^a-z0-9]/g, "-")}>
+                    ★ {f.toUpperCase()}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 
@@ -85,7 +120,7 @@ export default function FilterBar({
           <span className="text-[10px] text-[#777777] uppercase font-semibold">
             ARCHIVE TOTAL
           </span>
-          <span className="font-display font-extrabold text-xl text-black">
+          <span className="font-display font-extrabold text-xl text-black" suppressHydrationWarning>
             {totalResults.toString().padStart(2, "0")}
           </span>
         </div>

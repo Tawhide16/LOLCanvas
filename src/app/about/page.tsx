@@ -1,5 +1,6 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { Compass, Scale } from "lucide-react";
+import DeveloperSection from "@/components/about/DeveloperSection";
 
 export default function AboutPage() {
   return (
@@ -81,6 +82,9 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
+
+      {/* Developer Profile Spotlight */}
+      <DeveloperSection />
     </div>
   );
 }

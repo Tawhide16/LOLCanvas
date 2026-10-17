@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     const response = successResponse(result, "Templates retrieved successfully");
     response.headers.set(
       "Cache-Control",
-      "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+      "no-cache, no-store, must-revalidate"
     );
     return response;
   } catch (err: unknown) {

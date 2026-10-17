@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle, Edit3, Lock } from "lucide-react";
+import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle, Edit3, Lock, Loader2 } from "lucide-react";
 import FilterBar from "./FilterBar";
 import MemeCard from "./MemeCard";
 import MemeCardSkeleton from "./MemeCardSkeleton";
@@ -26,30 +26,15 @@ export default function TemplateGrid({
   const [format, setFormat] = useState("all");
   const [activePreviewTemplate, setActivePreviewTemplate] = useState<Template | null>(null);
 
-  // Dynamic template archive state: Instant initial data from SSR prop or localStorage cache (0ms delay)
+  // Dynamic template archive state: Instant initial data from SSR prop (0ms delay)
   const [templates, setTemplates] = useState<Template[]>(() => {
     if (initialTemplates && initialTemplates.length > 0) return initialTemplates;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("lolcanvas_cached_templates");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-    }
     return [];
   });
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(() => {
     if (initialTemplates && initialTemplates.length > 0) return false;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("lolcanvas_cached_templates");
-        if (cached && JSON.parse(cached).length > 0) return false;
-      } catch (e) {}
-    }
     return true;
   });
 
@@ -73,6 +58,7 @@ export default function TemplateGrid({
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [newImageOriginal, setNewImageOriginal] = useState<string | null>(null);
   const [isUploadingCard, setIsUploadingCard] = useState(false);
+  const [uploadCardProgress, setUploadCardProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check user session & admin status and load live templates
@@ -112,10 +98,25 @@ export default function TemplateGrid({
 
     // 2. Fetch live templates from DB (stale-while-revalidate background sync)
     async function loadTemplates() {
-      // Only trigger loading state if we have zero cached or initial templates
-      if (templates.length === 0) {
-        setIsLoadingTemplates(true);
-      }
+      // Read client cache on mount without causing SSR hydration mismatch
+      try {
+        const cached = localStorage.getItem("lolcanvas_cached_templates");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTemplates((prev) => (prev.length === 0 ? parsed : prev));
+            setIsLoadingTemplates(false);
+          }
+        }
+      } catch (e) {}
+
+      // Only trigger loading skeleton if we have zero cached or initial templates
+      setTemplates((current) => {
+        if (current.length === 0) {
+          setIsLoadingTemplates(true);
+        }
+        return current;
+      });
       try {
         const res = await fetch("/api/templates");
         if (res.ok) {
@@ -248,6 +249,18 @@ export default function TemplateGrid({
     if (!newImagePreview || !newTitle.trim()) return;
 
     setIsUploadingCard(true);
+    setUploadCardProgress(20);
+
+    const progressTimer = setInterval(() => {
+      setUploadCardProgress((prev) => {
+        if (prev >= 88) {
+          clearInterval(progressTimer);
+          return prev;
+        }
+        return prev + Math.floor(Math.random() * 8) + 4;
+      });
+    }, 120);
+
     try {
       const slug = newTitle.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
       const creatorEmail = currentUserEmail || "admin123@gmail.com";
@@ -268,6 +281,9 @@ export default function TemplateGrid({
           height: 1080,
         }),
       });
+
+      clearInterval(progressTimer);
+      setUploadCardProgress(100);
 
       if (res.ok) {
         const newCard: Template = {
@@ -314,7 +330,10 @@ export default function TemplateGrid({
     } catch (err) {
       alert("Network error uploading template.");
     } finally {
-      setIsUploadingCard(false);
+      setTimeout(() => {
+        setIsUploadingCard(false);
+        setUploadCardProgress(0);
+      }, 300);
     }
   };
 
@@ -513,9 +532,25 @@ export default function TemplateGrid({
           <button
             type="submit"
             disabled={!newImagePreview || !newTitle.trim() || isUploadingCard}
-            className="px-6 py-2.5 bg-black text-white hover:bg-[#333333] font-mono-code text-xs uppercase font-bold transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] disabled:opacity-50"
+            className="relative px-6 py-2.5 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase font-bold transition-all border border-black shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] disabled:opacity-50 overflow-hidden"
           >
-            {isUploadingCard ? "PUBLISHING..." : "PUBLISH CARD TO ARCHIVE ■"}
+            {/* Progress bar fill */}
+            {isUploadingCard && (
+              <div
+                className="absolute left-0 top-0 bottom-0 bg-[#E11D48] transition-all duration-150 ease-out"
+                style={{ width: `${uploadCardProgress}%` }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              {isUploadingCard ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>PUBLISHING... {uploadCardProgress}%</span>
+                </>
+              ) : (
+                <span>PUBLISH CARD TO ARCHIVE ■</span>
+              )}
+            </span>
           </button>
         </form>
       )}

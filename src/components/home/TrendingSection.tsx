@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -12,15 +12,6 @@ interface TrendingSectionProps {
 export default function TrendingSection({ initialTemplates }: TrendingSectionProps) {
   const [trendingTemplates, setTrendingTemplates] = useState<any[]>(() => {
     if (initialTemplates && initialTemplates.length > 0) return initialTemplates;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("lolcanvas_cached_templates");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-    }
     return [];
   });
   const [scrollIndex, setScrollIndex] = useState(0);
@@ -36,6 +27,17 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
       setTrendingTemplates(filtered);
       return;
     }
+
+    // Safely check client cache on mount
+    try {
+      const cached = localStorage.getItem("lolcanvas_cached_templates");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTrendingTemplates(parsed);
+        }
+      }
+    } catch (e) {}
 
     async function loadTrending() {
       try {

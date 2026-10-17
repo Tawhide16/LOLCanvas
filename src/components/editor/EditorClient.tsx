@@ -32,6 +32,7 @@ import {
   Search,
   Crop,
   RotateCw,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CanvasStage from "./CanvasStage";
@@ -197,6 +198,7 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishProgress, setPublishProgress] = useState(0);
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -650,7 +652,19 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
 
     setSelectedLayerId(null);
     setIsPublishing(true);
+    setPublishProgress(20);
     setPublishSuccess(null);
+
+    // Smooth progress ticker
+    const progressTimer = setInterval(() => {
+      setPublishProgress((prev) => {
+        if (prev >= 88) {
+          clearInterval(progressTimer);
+          return prev;
+        }
+        return prev + Math.floor(Math.random() * 8) + 4;
+      });
+    }, 120);
 
     setTimeout(async () => {
       try {
@@ -665,11 +679,14 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
           }
         } catch (e) {}
 
-        const res = await fetch("/api/memes", {
+        const titleUpper = activePresetName.toUpperCase();
+        const slug = activePresetName.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
+
+        const memePromise = fetch("/api/memes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: activePresetName.toUpperCase(),
+            title: titleUpper,
             previewUrl: dataUrl,
             layers: layers,
             width: canvasWidth,
@@ -679,18 +696,77 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
           }),
         });
 
+        const templatePromise = fetch("/api/templates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: titleUpper,
+            slug,
+            category: "classic",
+            svgDataUri: dataUrl,
+            originalUrl: dataUrl,
+            tags: ["classic", "community_upload", `author:${authorEmail.toLowerCase().trim()}`],
+            authorEmail: authorEmail,
+            width: canvasWidth,
+            height: canvasHeight,
+          }),
+        });
+
+        const [res] = await Promise.all([memePromise, templatePromise]);
+        clearInterval(progressTimer);
+        setPublishProgress(100);
+
         if (res.ok) {
-          setPublishSuccess("SAVED TO PROFILE!");
+          try {
+            const cachedRaw = localStorage.getItem("lolcanvas_cached_templates");
+            const cachedList = cachedRaw ? JSON.parse(cachedRaw) : [];
+            const newCard = {
+              id: slug,
+              slug: slug,
+              index: `№ ${(cachedList.length + 1).toString().padStart(4, "0")}`,
+              title: titleUpper,
+              categoryId: "classic",
+              categoryName: "CLASSIC",
+              format: "classic",
+              formatLabel: "Community Upload",
+              svgDataUri: dataUrl,
+              originalUrl: dataUrl,
+              width: canvasWidth,
+              height: canvasHeight,
+              aspectRatio: `${canvasWidth}:${canvasHeight}`,
+              source: "CREATOR UPLOAD",
+              license: "PUBLIC COMMONS",
+              tags: ["classic", "community_upload", `author:${authorEmail}`],
+              defaultTopText: "",
+              defaultBottomText: "",
+              isWatermarkFree: true,
+              trendingRank: 1,
+              remixCount: 1,
+              downloadCount: 0,
+              createdAt: new Date().toISOString(),
+              authorEmail: authorEmail,
+            };
+            localStorage.setItem(
+              "lolcanvas_cached_templates",
+              JSON.stringify([newCard, ...cachedList])
+            );
+          } catch (e) {}
+
+          setPublishSuccess("SAVED & PUBLISHED!");
           setTimeout(() => setPublishSuccess(null), 3500);
         } else {
           alert("Failed to save meme. Please try again.");
         }
       } catch (err) {
+        clearInterval(progressTimer);
         console.error("Meme save error:", err);
       } finally {
-        setIsPublishing(false);
+        setTimeout(() => {
+          setIsPublishing(false);
+          setPublishProgress(0);
+        }, 300);
       }
-    }, 120);
+    }, 100);
   };
 
   // Exit Editor
@@ -838,20 +914,34 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
           <button
             onClick={handleUploadToCommunity}
             disabled={isPublishing}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] disabled:opacity-50 text-xs"
+            className="relative inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-black text-white hover:bg-[#222222] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(225,29,72,1)] disabled:opacity-50 text-xs overflow-hidden border border-black"
             title="Upload and save to your profile & community archive"
           >
-            {publishSuccess ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                <span className="text-[#10B981]">SAVED!</span>
-              </>
-            ) : (
-              <>
-                <UploadCloud className="w-3.5 h-3.5 text-[#E11D48]" />
-                <span>{isPublishing ? "SAVING..." : "UPLOAD & SAVE"}</span>
-              </>
+            {/* Progress bar fill */}
+            {isPublishing && (
+              <div
+                className="absolute left-0 top-0 bottom-0 bg-[#E11D48] transition-all duration-150 ease-out"
+                style={{ width: `${publishProgress}%` }}
+              />
             )}
+            <span className="relative z-10 flex items-center gap-1.5">
+              {publishSuccess ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                  <span className="text-[#10B981]">SAVED!</span>
+                </>
+              ) : isPublishing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                  <span>UPLOADING... {publishProgress}%</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-3.5 h-3.5 text-[#E11D48]" />
+                  <span>UPLOAD & SAVE</span>
+                </>
+              )}
+            </span>
           </button>
 
           {/* EXIT EDITOR BUTTON */}

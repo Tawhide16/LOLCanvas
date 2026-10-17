@@ -20,6 +20,7 @@ import {
   Plus,
   Edit3,
   X,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -46,6 +47,7 @@ export default function ProfilePage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadCategory, setUploadCategory] = useState("classic");
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,11 +176,23 @@ export default function ProfilePage() {
     if (!uploadPreview || !uploadTitle.trim() || !user) return;
 
     setIsUploading(true);
+    setUploadProgress(15);
     setUploadSuccess(null);
+
+    // Smooth ticker interval for live progress feedback
+    const progressTimer = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 88) {
+          clearInterval(progressTimer);
+          return prev;
+        }
+        return prev + Math.floor(Math.random() * 8) + 4;
+      });
+    }, 120);
 
     try {
       // A. Save to user memes repository
-      const res = await fetch("/api/memes", {
+      const memePromise = fetch("/api/memes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -201,7 +215,7 @@ export default function ProfilePage() {
 
       // B. Also publish as a website template card tagged with user's author email
       const slug = uploadTitle.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${Date.now()}`;
-      await fetch("/api/templates", {
+      const templatePromise = fetch("/api/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -217,7 +231,11 @@ export default function ProfilePage() {
         }),
       }).catch((err) => console.warn("Failed to mirror to template archive:", err));
 
-      if (res.ok) {
+      const [res] = await Promise.all([memePromise, templatePromise]);
+      clearInterval(progressTimer);
+      setUploadProgress(100);
+
+      if (res && res.ok) {
         setUploadSuccess("Meme successfully published to community archive and saved to your profile!");
         setUploadFile(null);
         setUploadPreview(null);
@@ -228,9 +246,13 @@ export default function ProfilePage() {
         alert("Failed to upload meme. Please try again.");
       }
     } catch (err) {
+      clearInterval(progressTimer);
       alert("Network error while uploading meme.");
     } finally {
-      setIsUploading(false);
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 300);
     }
   };
 
@@ -564,9 +586,28 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={!uploadPreview || !uploadTitle.trim() || isUploading}
-                  className="w-full py-3 bg-black text-white hover:bg-[#333333] font-mono-code text-xs uppercase font-bold tracking-wider transition-all disabled:opacity-50 border border-black shadow-[2px_2px_0px_0px_rgba(225,29,72,1)]"
+                  className="relative w-full py-3.5 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase font-bold tracking-wider transition-all disabled:opacity-50 border border-black shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] overflow-hidden"
                 >
-                  {isUploading ? "UPLOADING TO NEON DB..." : "UPLOAD & PUBLISH TO WEBSITE ■"}
+                  {/* Progress bar fill */}
+                  {isUploading && (
+                    <div
+                      className="absolute left-0 top-0 bottom-0 bg-[#E11D48] transition-all duration-150 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>UPLOADING MEME... {uploadProgress}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4 text-[#E11D48]" />
+                        <span>UPLOAD & PUBLISH TO WEBSITE ■</span>
+                      </>
+                    )}
+                  </span>
                 </button>
               </div>
             </div>

@@ -23,15 +23,58 @@ export async function getTemplates(query: TemplateQueryInput) {
     console.warn("Redis read failed, querying database/memory:", err);
   }
 
-  // 2. Query Data from Neon DB
+  // 2. Query Data from Neon DB in parallel
   let dbTemplates: any[] = [];
+  let publicMemes: any[] = [];
   try {
-    dbTemplates = await prisma.template.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const [templatesResult, memesResult] = await Promise.all([
+      prisma.template.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 60,
+      }),
+      prisma.meme.findMany({
+        where: { isPublic: true },
+        select: {
+          id: true,
+          title: true,
+          previewUrl: true,
+          width: true,
+          height: true,
+          downloads: true,
+          createdAt: true,
+          author: {
+            select: {
+              email: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      }),
+    ]);
+    dbTemplates = templatesResult;
+    publicMemes = memesResult;
   } catch (err) {
-    console.warn("DB query for templates failed, using built-in catalog fallback:", err);
-    dbTemplates = [];
+    console.warn("DB query failed, using fallback:", err);
+  }
+
+  // Fallback to built-in catalog if DB query returned empty
+  if (dbTemplates.length === 0) {
+    dbTemplates = TEMPLATES.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      title: t.title,
+      category: t.categoryId,
+      tags: t.tags || [],
+      svgDataUri: t.svgDataUri,
+      width: t.width,
+      height: t.height,
+      defaultTopText: t.defaultTopText,
+      defaultBottomText: t.defaultBottomText,
+      downloads: t.downloadCount || 1000,
+      createdAt: new Date(t.createdAt || Date.now()),
+    }));
   }
 
   // Format DB templates
@@ -72,6 +115,51 @@ export async function getTemplates(query: TemplateQueryInput) {
     };
   });
 
+  // Merge any public memes not already in the templates list
+  const existingTitles = new Set(results.map((r) => r.title.toLowerCase().trim()));
+  const existingIds = new Set(results.map((r) => r.id));
+
+  for (const m of publicMemes) {
+    if (!m.previewUrl) continue;
+    const titleKey = m.title.toLowerCase().trim();
+    if (existingTitles.has(titleKey) || existingIds.has(m.id)) continue;
+
+    results.unshift({
+      id: m.id,
+      slug: m.id,
+      index: `№ ${(results.length + 1).toString().padStart(4, "0")}`,
+      title: m.title.toUpperCase(),
+      categoryId: "classic",
+      categoryName: "COMMUNITY",
+      format: "classic",
+      formatLabel: "Community Upload",
+      svgDataUri: m.previewUrl,
+      originalUrl: undefined,
+      width: m.width || 1080,
+      height: m.height || 1080,
+      aspectRatio: `${m.width || 1080}:${m.height || 1080}`,
+      tags: ["classic", "community_upload", `author:${m.author?.email || "creator"}`],
+      defaultTopText: "",
+      defaultBottomText: m.previewUrl,
+      isWatermarkFree: true,
+      trendingRank: 1,
+      remixCount: m.downloads || 1500,
+      downloadCount: m.downloads || 800,
+      createdAt: m.createdAt.toISOString(),
+      authorEmail: m.author?.email || null,
+    });
+    existingTitles.add(titleKey);
+  }
+
+  // Sort newest first
+  results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Re-index
+  results = results.map((r, idx) => ({
+    ...r,
+    index: `№ ${(idx + 1).toString().padStart(4, "0")}`,
+  }));
+
   if (query.category && query.category !== "all") {
     results = results.filter(
       (t) =>
@@ -96,9 +184,9 @@ export async function getTemplates(query: TemplateQueryInput) {
     limit: query.limit,
   };
 
-  // 3. Cache response in Redis/Memory for 120 seconds for instant sub-millisecond retrieval
+  // 3. Cache response in Redis/Memory for 60 seconds
   try {
-    await redis.set(cacheKey, responseData, { ex: 120 });
+    await redis.set(cacheKey, responseData, { ex: 60 });
   } catch (err) {}
 
   return {
@@ -107,9 +195,17 @@ export async function getTemplates(query: TemplateQueryInput) {
   };
 }
 
-async function invalidateTemplateCache() {
+export async function invalidateTemplateCache() {
   try {
-    await redis.del("templates:cat_all:q_:p_1");
+    const commonKeys = [
+      "templates:cat_all:q_:p_1",
+      "templates:cat_all:q_:p_null",
+      "templates:cat_all:q_:p_undefined",
+      "templates:cat_classic:q_:p_1",
+    ];
+    for (const key of commonKeys) {
+      await redis.del(key);
+    }
   } catch (e) {}
 }
 

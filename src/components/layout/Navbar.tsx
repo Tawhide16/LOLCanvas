@@ -3,22 +3,63 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Menu, X, Plus, User, Palette, Crown } from "lucide-react";
+import { Search, Menu, X, Plus, User, Palette, Crown, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import SuperAdminLogoModal from "./SuperAdminLogoModal";
+import MagicSearchDropdown from "./MagicSearchDropdown";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Super Admin Customizable Logo State
+  const [logoConfig, setLogoConfig] = useState({
+    logoUrl: "/logo-icon.png",
+    logoText: "LOLCANVAS",
+    logoTag: "®",
+  });
+  const [showLogoModal, setShowLogoModal] = useState(false);
+
   useEffect(() => {
     setMounted(true);
+
+    // Read cached custom logo
+    try {
+      const cachedLogo = localStorage.getItem("lolcanvas_custom_logo");
+      if (cachedLogo) {
+        setLogoConfig(JSON.parse(cachedLogo));
+      }
+    } catch (e) {}
+
+    // Fetch persistent site logo from API
+    fetch("/api/admin/site-config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.logoUrl) {
+          setLogoConfig({
+            logoUrl: data.data.logoUrl || "/logo-icon.png",
+            logoText: data.data.logoText || "LOLCANVAS",
+            logoTag: data.data.logoTag || "®",
+          });
+          try {
+            localStorage.setItem("lolcanvas_custom_logo", JSON.stringify(data.data));
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
+
+    const handleLogoChange = (e: any) => {
+      if (e.detail) setLogoConfig(e.detail);
+    };
+    window.addEventListener("lolcanvas_logo_changed", handleLogoChange);
 
     const evaluateAdmin = (email: string | null, role?: string | null) => {
       if (!email) return false;
@@ -60,11 +101,13 @@ export default function Navbar() {
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener("lolcanvas_logo_changed", handleLogoChange);
     };
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSearchDropdown(false);
     if (searchQuery.trim()) {
       router.push(`/cards?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
@@ -85,37 +128,72 @@ export default function Navbar() {
       {/* Connected Desktop Navigation Strip */}
       <div className="flex items-stretch divide-x divide-black h-14 md:h-16 overflow-x-auto select-none">
         {/* Brand */}
-        <Link
-          href="/"
-          className="flex items-center px-4 md:px-6 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors group shrink-0"
-        >
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center px-4 md:px-6 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors group shrink-0">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5"
+          >
             <img
-              src="/logo-icon.png"
+              src={logoConfig.logoUrl}
               alt="LOLCanvas Icon"
               className="w-7 h-7 object-contain transition-transform group-hover:scale-110 duration-200"
             />
-            <span className="font-display font-extrabold text-lg md:text-xl tracking-tight text-black">
-              LOLCANVAS<span className="text-[11px] align-super font-mono-code font-normal">®</span>
+            <span className="font-display font-extrabold text-lg md:text-xl tracking-tight text-black uppercase">
+              {logoConfig.logoText}
+              {logoConfig.logoTag && (
+                <span className="text-[11px] align-super font-mono-code font-normal ml-0.5">
+                  {logoConfig.logoTag}
+                </span>
+              )}
             </span>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Live Search */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="flex-1 min-w-[180px] flex items-center bg-[#FAF9F5] px-3 md:px-4 relative focus-within:bg-white transition-colors"
-        >
+          {/* Super Admin Quick Logo Edit Badge */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowLogoModal(true)}
+              title="SUPER ADMIN: Change Navbar Logo & Branding"
+              className="ml-3 px-1.5 py-0.5 bg-[#FFE4E6] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors text-[9px] font-mono-code font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
+            >
+              <Crown className="w-2.5 h-2.5" />
+              <span>EDIT LOGO</span>
+            </button>
+          )}
+        </div>
+
+        {/* Live Search with Magic Filter */}
+        <div className="relative flex-1 min-w-[200px] flex items-center bg-[#FAF9F5] px-3 md:px-4 focus-within:bg-white transition-colors">
           <Search className="w-4 h-4 text-[#777777] shrink-0 mr-2.5" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="SEARCH TEMPLATES..."
-            aria-label="Search meme templates"
-            className="w-full bg-transparent font-mono-code text-[12px] md:text-[13px] text-black placeholder:text-[#999999] focus:outline-none uppercase tracking-wider"
+          <form
+            onSubmit={handleSearchSubmit}
+            className="w-full"
+          >
+            <input
+              type="text"
+              value={searchQuery}
+              onFocus={() => setShowSearchDropdown(true)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (!showSearchDropdown) setShowSearchDropdown(true);
+              }}
+              placeholder="SEARCH TEMPLATES (MAGIC FILTER)..."
+              aria-label="Search meme templates"
+              className="w-full bg-transparent font-mono-code text-[12px] md:text-[13px] text-black placeholder:text-[#999999] focus:outline-none uppercase tracking-wider"
+            />
+          </form>
+
+          {/* Magic Search & Suggestions Dropdown */}
+          <MagicSearchDropdown
+            isOpen={showSearchDropdown}
+            onClose={() => setShowSearchDropdown(false)}
+            searchQuery={searchQuery}
+            onSelectQuery={(q) => {
+              setSearchQuery(q);
+              setShowSearchDropdown(false);
+            }}
           />
-        </form>
+        </div>
 
         {/* Desktop Links with Framer Motion Active Tab indicator */}
         <div className="hidden xl:flex items-stretch divide-x divide-black shrink-0 font-mono-code text-[12px] tracking-wider font-medium">
@@ -236,6 +314,17 @@ export default function Navbar() {
           )}
         </motion.div>
       )}
+
+      {/* Super Admin Logo Customizer Modal */}
+      <SuperAdminLogoModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        currentLogoUrl={logoConfig.logoUrl}
+        currentLogoText={logoConfig.logoText}
+        currentLogoTag={logoConfig.logoTag}
+        adminEmail={userEmail}
+        onLogoUpdated={(updated) => setLogoConfig(updated)}
+      />
     </nav>
   );
 }
