@@ -10,6 +10,7 @@ import SuperAdminThemeModal from "@/components/common/SuperAdminThemeModal";
 import SuperAdminFloatingBar from "@/components/common/SuperAdminFloatingBar";
 import MagicSearchDropdown from "./MagicSearchDropdown";
 import { useAdminEditMode } from "@/lib/useAdminEditMode";
+import { useSiteLogo } from "@/lib/useSiteLogo";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -22,47 +23,11 @@ export default function Navbar() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const { isEditMode } = useAdminEditMode();
-
-  // Super Admin Customizable Logo State
-  const [logoConfig, setLogoConfig] = useState({
-    logoUrl: "/logo-icon.png",
-    logoText: "LOLCANVAS",
-    logoTag: "®",
-  });
+  const logoConfig = useSiteLogo();
   const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-
-    // Read cached custom logo
-    try {
-      const cachedLogo = localStorage.getItem("lolcanvas_custom_logo");
-      if (cachedLogo) {
-        setLogoConfig(JSON.parse(cachedLogo));
-      }
-    } catch (e) {}
-
-    // Fetch persistent site logo from API
-    fetch("/api/admin/site-config")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.data?.logoUrl) {
-          setLogoConfig({
-            logoUrl: data.data.logoUrl || "/logo-icon.png",
-            logoText: data.data.logoText || "LOLCANVAS",
-            logoTag: data.data.logoTag || "®",
-          });
-          try {
-            localStorage.setItem("lolcanvas_custom_logo", JSON.stringify(data.data));
-          } catch (e) {}
-        }
-      })
-      .catch(() => {});
-
-    const handleLogoChange = (e: any) => {
-      if (e.detail) setLogoConfig(e.detail);
-    };
-    window.addEventListener("lolcanvas_logo_changed", handleLogoChange);
 
     const evaluateAdmin = (email: string | null, role?: string | null) => {
       if (!email) return false;
@@ -104,7 +69,6 @@ export default function Navbar() {
 
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener("lolcanvas_logo_changed", handleLogoChange);
     };
   }, []);
 
@@ -347,7 +311,6 @@ export default function Navbar() {
         currentLogoText={logoConfig.logoText}
         currentLogoTag={logoConfig.logoTag}
         adminEmail={userEmail}
-        onLogoUpdated={(updated) => setLogoConfig(updated)}
       />
 
       {/* Super Admin Floating Quick Action Bar */}

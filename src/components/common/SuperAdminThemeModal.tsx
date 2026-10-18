@@ -26,7 +26,7 @@ interface SuperAdminThemeModalProps {
   currentLogoText: string;
   currentLogoTag: string;
   adminEmail: string | null;
-  onLogoUpdated: (newLogo: { logoUrl: string; logoText: string; logoTag: string }) => void;
+  onLogoUpdated?: (newLogo: { logoUrl: string; logoText: string; logoTag: string }) => void;
 }
 
 const THEME_ACCENTS = [
@@ -136,7 +136,7 @@ export default function SuperAdminThemeModal({
         }),
       });
 
-      onLogoUpdated(newConfig);
+      onLogoUpdated?.(newConfig);
       setStatusMessage("✓ Theme and branding published live!");
       setTimeout(() => {
         setIsSaving(false);
@@ -144,7 +144,7 @@ export default function SuperAdminThemeModal({
       }, 700);
     } catch (err: any) {
       console.error("Save theme error:", err);
-      onLogoUpdated(newConfig);
+      onLogoUpdated?.(newConfig);
       setIsSaving(false);
       onClose();
     }

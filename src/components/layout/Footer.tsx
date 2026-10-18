@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useSiteContent } from "@/lib/useSiteContent";
+import { useSiteLogo } from "@/lib/useSiteLogo";
 import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 export default function Footer() {
   const { content } = useSiteContent();
+  const siteLogo = useSiteLogo();
 
   return (
     <footer className="w-full bg-[#000000] text-white border-t border-black">
@@ -15,12 +17,17 @@ export default function Footer() {
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-2">
             <img
-              src="/logo-icon.png"
+              src={siteLogo.logoUrl}
               alt="LOLCanvas Icon"
               className="w-6 h-6 object-contain bg-white rounded-xs p-0.5"
             />
-            <span className="font-display font-extrabold text-base tracking-tight text-white">
-              LOLCANVAS®
+            <span className="font-display font-extrabold text-base tracking-tight text-white uppercase">
+              {siteLogo.logoText}
+              {siteLogo.logoTag && (
+                <span className="text-[10px] align-super font-mono-code font-normal ml-0.5">
+                  {siteLogo.logoTag}
+                </span>
+              )}
             </span>
           </div>
           <SuperAdminInlineEdit

@@ -43,6 +43,7 @@ import { TEMPLATES } from "@/lib/data";
 import { SOCIAL_PRESETS, VIDEO_PRESETS, CanvasPreset } from "@/lib/editorPresets";
 import { MEME_OVERLAYS, MemeOverlayItem } from "@/lib/memeOverlays";
 import { CanvasLayer, Template } from "@/types";
+import { useSiteLogo } from "@/lib/useSiteLogo";
 
 interface EditorClientProps {
   templateSlug?: string;
@@ -79,6 +80,7 @@ const BLANK_TEMPLATE: Template = {
 
 export default function EditorClient({ templateSlug = "blank-canvas" }: EditorClientProps) {
   const router = useRouter();
+  const siteLogo = useSiteLogo();
 
   const getInitialCustom = (): { template: Template; bg: string } | null => {
     if (typeof window === "undefined" || !templateSlug) return null;
@@ -824,12 +826,17 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
             title="Return to LOLCanvas Home"
           >
             <img
-              src="/logo-icon.png"
+              src={siteLogo.logoUrl}
               alt="LOLCanvas Icon"
               className="w-6 h-6 object-contain"
             />
-            <span className="font-display font-extrabold text-base tracking-tight text-black">
-              LOLCANVAS<span className="text-[10px] align-super">®</span>
+            <span className="font-display font-extrabold text-base tracking-tight text-black uppercase">
+              {siteLogo.logoText}
+              {siteLogo.logoTag && (
+                <span className="text-[10px] align-super font-mono-code font-normal ml-0.5">
+                  {siteLogo.logoTag}
+                </span>
+              )}
             </span>
           </Link>
 
