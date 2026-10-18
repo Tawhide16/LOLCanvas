@@ -6,8 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { Search, Menu, X, Plus, User, Palette, Crown, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import SuperAdminLogoModal from "./SuperAdminLogoModal";
+import SuperAdminThemeModal from "@/components/common/SuperAdminThemeModal";
+import SuperAdminFloatingBar from "@/components/common/SuperAdminFloatingBar";
 import MagicSearchDropdown from "./MagicSearchDropdown";
+import { useAdminEditMode } from "@/lib/useAdminEditMode";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -19,6 +21,7 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { isEditMode } = useAdminEditMode();
 
   // Super Admin Customizable Logo State
   const [logoConfig, setLogoConfig] = useState({
@@ -26,7 +29,7 @@ export default function Navbar() {
     logoText: "LOLCANVAS",
     logoTag: "®",
   });
-  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -148,16 +151,23 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Super Admin Quick Logo Edit Badge */}
+          {/* Super Admin Quick EDIT THEME Button */}
           {isAdmin && (
             <button
               type="button"
-              onClick={() => setShowLogoModal(true)}
-              title="SUPER ADMIN: Change Navbar Logo & Branding"
-              className="ml-3 px-1.5 py-0.5 bg-[#FFE4E6] border border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors text-[9px] font-mono-code font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0px_0px_rgba(225,29,72,1)]"
+              onClick={() => setShowThemeModal(true)}
+              title="SUPER ADMIN: Edit Website Theme, Logo & Inline Mode"
+              className={`ml-3 px-2 py-1 border text-[10px] font-mono-code font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ${
+                isEditMode
+                  ? "bg-[#DCFCE7] border-[#16A34A] text-[#15803D] hover:bg-[#16A34A] hover:text-white"
+                  : "bg-[#FFE4E6] border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white"
+              }`}
             >
-              <Crown className="w-2.5 h-2.5" />
-              <span>EDIT LOGO</span>
+              <Palette className="w-3 h-3 text-[#E11D48]" />
+              <span>EDIT THEME</span>
+              {isEditMode && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
+              )}
             </button>
           )}
         </div>
@@ -329,16 +339,19 @@ export default function Navbar() {
         </motion.div>
       )}
 
-      {/* Super Admin Logo Customizer Modal */}
-      <SuperAdminLogoModal
-        isOpen={showLogoModal}
-        onClose={() => setShowLogoModal(false)}
+      {/* Super Admin Theme & Website Customizer Modal */}
+      <SuperAdminThemeModal
+        isOpen={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
         currentLogoUrl={logoConfig.logoUrl}
         currentLogoText={logoConfig.logoText}
         currentLogoTag={logoConfig.logoTag}
         adminEmail={userEmail}
         onLogoUpdated={(updated) => setLogoConfig(updated)}
       />
+
+      {/* Super Admin Floating Quick Action Bar */}
+      <SuperAdminFloatingBar onOpenThemeModal={() => setShowThemeModal(true)} />
     </nav>
   );
 }

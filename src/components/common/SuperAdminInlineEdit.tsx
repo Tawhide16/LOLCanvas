@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Edit3, X, Check, Crown, RotateCcw, Loader2 } from "lucide-react";
 import { useAdminAuth } from "@/lib/useAdminAuth";
+import { useAdminEditMode } from "@/lib/useAdminEditMode";
 import { DEFAULT_SITE_CONFIG } from "@/app/api/admin/site-config/route";
 
 interface SuperAdminInlineEditProps {
@@ -26,6 +27,7 @@ export default function SuperAdminInlineEdit({
   asBlock = false,
 }: SuperAdminInlineEditProps) {
   const { isAdmin, userEmail } = useAdminAuth();
+  const { isEditMode } = useAdminEditMode();
   const [isOpen, setIsOpen] = useState(false);
   const [editedValue, setEditedValue] = useState(value || "");
   const [isSaving, setIsSaving] = useState(false);
@@ -41,8 +43,8 @@ export default function SuperAdminInlineEdit({
     setEditedValue(value || "");
   }, [value]);
 
-  // If user is not Super Admin, render children directly
-  if (!isAdmin) {
+  // If user is not Super Admin OR Edit Mode is not turned on, render children cleanly
+  if (!isAdmin || !isEditMode) {
     return <>{children}</>;
   }
 
