@@ -13,13 +13,25 @@ import {
 } from "lucide-react";
 import { CATEGORIES, TEMPLATES } from "@/lib/data";
 import { Category, Template } from "@/types";
+import { useSiteContent } from "@/lib/useSiteContent";
+import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 interface ExtendedCategory extends Category {
   isCustom?: boolean;
 }
 
-export default function CollectionClient() {
-  const [templates, setTemplates] = useState<Template[]>(TEMPLATES);
+interface CollectionClientProps {
+  initialTemplates?: Template[];
+}
+
+export default function CollectionClient({ initialTemplates = [] }: CollectionClientProps) {
+  const { content } = useSiteContent();
+  const [templates, setTemplates] = useState<Template[]>(() => {
+    if (initialTemplates && initialTemplates.length > 0) {
+      return initialTemplates;
+    }
+    return TEMPLATES;
+  });
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [filterMode, setFilterMode] = useState<"all" | "has_uploads">("all");
   const [mounted, setMounted] = useState(false);
@@ -214,21 +226,27 @@ export default function CollectionClient() {
       return {
         cat,
         uploadedCount: uploadedCards.length,
-        totalItems: cat.isCustom
-          ? matchingTemplates.length
-          : cat.count + uploadedCards.length,
+        totalItems: matchingTemplates.length,
         previews: prioritizedPreviews.slice(0, 3),
         hasUploadedRefs: uploadedCards.length > 0,
       };
     });
   }, [allCategories, templates]);
 
-  // Filter categories if user toggles "WITH UPLOADED REFS"
+  // Filter and sort categories so categories with suggestion / uploaded references load first
   const visibleCategories = useMemo(() => {
+    let list = processedCategories;
     if (filterMode === "has_uploads") {
-      return processedCategories.filter((item) => item.hasUploadedRefs);
+      list = processedCategories.filter((item) => item.hasUploadedRefs);
     }
-    return processedCategories;
+
+    // Sort categories: categories containing uploaded reference suggestions load FIRST!
+    return [...list].sort((a, b) => {
+      if (a.hasUploadedRefs && !b.hasUploadedRefs) return -1;
+      if (!a.hasUploadedRefs && b.hasUploadedRefs) return 1;
+      if (b.uploadedCount !== a.uploadedCount) return b.uploadedCount - a.uploadedCount;
+      return 0;
+    });
   }, [processedCategories, filterMode]);
 
   const totalCommunityUploads = useMemo(() => {
@@ -244,12 +262,28 @@ export default function CollectionClient() {
             <FolderGit2 className="w-3 h-3 text-black" />
             CATEGORIES ({allCategories.length.toString().padStart(2, "0")} TAXONOMIES)
           </div>
-          <h1 className="font-display font-extrabold text-2xl sm:text-4xl uppercase tracking-tight text-black flex items-center gap-3">
-            CATEGORY INDEX.
-          </h1>
-          <p className="font-body text-xs text-[#666666] max-w-xl">
-            Explore curated meme taxonomy archives with real-time community uploaded card references and suggestions ready for the canvas editor.
-          </p>
+          <SuperAdminInlineEdit
+            field="collectionTitle"
+            label="Categories Page Title"
+            value={content.collectionTitle}
+            asBlock
+          >
+            <h1 className="font-display font-extrabold text-2xl sm:text-4xl uppercase tracking-tight text-black flex items-center gap-3">
+              {content.collectionTitle}
+            </h1>
+          </SuperAdminInlineEdit>
+
+          <SuperAdminInlineEdit
+            field="collectionSubtitle"
+            label="Categories Subtitle Description"
+            value={content.collectionSubtitle}
+            multiline
+            asBlock
+          >
+            <p className="font-body text-xs text-[#666666] max-w-xl">
+              {content.collectionSubtitle}
+            </p>
+          </SuperAdminInlineEdit>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -259,7 +293,7 @@ export default function CollectionClient() {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white hover:bg-[#E11D48] font-mono-code text-xs font-bold uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px]"
           >
             <UploadCloud className="w-3.5 h-3.5" />
-            <span>+ UPLOAD REFERENCE</span>
+            <span>UPLOAD REFERENCE</span>
           </Link>
 
           {/* Uploaded References Counter Pill */}
@@ -381,7 +415,7 @@ export default function CollectionClient() {
                         title="Upload a new card reference into this category"
                       >
                         <UploadCloud className="w-3.5 h-3.5" />
-                        + UPLOAD REFERENCE
+                        UPLOAD REFERENCE
                       </Link>
                     </div>
                   </div>
@@ -396,9 +430,9 @@ export default function CollectionClient() {
                           <Link
                             key={item.id}
                             href={`/edit/${encodeURIComponent(item.slug || item.id)}`}
-                            className={`group relative border bg-[#FAF9F5] hover:bg-white p-2 flex flex-col justify-between transition-all hover:translate-y-[-2px] ${
+                            className={`group relative border-2 bg-white p-2 flex flex-col justify-between transition-all hover:translate-y-[-2px] ${
                               isUploaded
-                                ? "border-[#E11D48] shadow-[2px_2px_0px_0px_rgba(225,29,72,0.3)] hover:shadow-[3px_3px_0px_0px_rgba(225,29,72,1)]"
+                                ? "border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.25)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] ring-1 ring-black/10"
                                 : "border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.08)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
                             }`}
                           >
@@ -408,7 +442,9 @@ export default function CollectionClient() {
                                 src={item.svgDataUri}
                                 alt={item.title}
                                 className="max-h-full max-w-full object-contain"
-                                loading="lazy"
+                                loading={isUploaded ? "eager" : "lazy"}
+                                fetchPriority={isUploaded ? "high" : "auto"}
+                                decoding="async"
                               />
 
                               {/* Reference Suggestion Tag Badge */}
