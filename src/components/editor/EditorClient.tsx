@@ -50,7 +50,34 @@ interface EditorClientProps {
 
 type MainCategory = "social" | "video" | "meme" | "custom" | "upload";
 
-export default function EditorClient({ templateSlug = "drake-hotline" }: EditorClientProps) {
+const BLANK_TEMPLATE: Template = {
+  id: "blank-canvas",
+  slug: "blank-canvas",
+  index: "№ 0001",
+  title: "BLANK CANVAS",
+  categoryId: "classic",
+  categoryName: "CLASSIC",
+  format: "classic",
+  formatLabel: "Clean Canvas",
+  remixCount: 0,
+  downloadCount: 0,
+  createdAt: new Date().toISOString(),
+  source: "LOLCanvas",
+  license: "Public Domain",
+  aspectRatio: "1:1",
+  width: 1080,
+  height: 1080,
+  defaultTopText: "",
+  defaultBottomText: "",
+  svgDataUri:
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1080' viewBox='0 0 1080 1080'><rect width='1080' height='1080' fill='%23FFFFFF'/></svg>",
+  originalUrl:
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1080' viewBox='0 0 1080 1080'><rect width='1080' height='1080' fill='%23FFFFFF'/></svg>",
+  isWatermarkFree: true,
+  tags: ["blank", "canvas"],
+};
+
+export default function EditorClient({ templateSlug = "blank-canvas" }: EditorClientProps) {
   const router = useRouter();
 
   const getInitialCustom = (): { template: Template; bg: string } | null => {
@@ -96,13 +123,13 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
 
   const cachedCustom = getInitialCustom();
   const staticFound = TEMPLATES.find((t) => t.slug === templateSlug || t.id === templateSlug);
-  const initialTemplate = staticFound || cachedCustom?.template || TEMPLATES[0];
+  const initialTemplate = staticFound || cachedCustom?.template || TEMPLATES[0] || BLANK_TEMPLATE;
 
   const [activeCategory, setActiveCategory] = useState<MainCategory>("meme");
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(initialTemplate);
-  const [activePresetName, setActivePresetName] = useState<string>(initialTemplate.title);
-  const [canvasWidth, setCanvasWidth] = useState<number>(initialTemplate.width || 1080);
-  const [canvasHeight, setCanvasHeight] = useState<number>(initialTemplate.height || 1080);
+  const [activePresetName, setActivePresetName] = useState<string>(initialTemplate?.title || "BLANK CANVAS");
+  const [canvasWidth, setCanvasWidth] = useState<number>(initialTemplate?.width || 1080);
+  const [canvasHeight, setCanvasHeight] = useState<number>(initialTemplate?.height || 1080);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [customBgImage, setCustomBgImage] = useState<string | null>(
     staticFound ? null : cachedCustom ? cachedCustom.bg : null
@@ -1323,38 +1350,20 @@ export default function EditorClient({ templateSlug = "drake-hotline" }: EditorC
                       <Search className="w-3 h-3 text-[#777777] absolute left-2 top-2" />
                     </div>
 
-                    <div className="grid grid-cols-2 border border-black divide-x divide-black bg-white text-[9px] font-bold uppercase">
+                    <div className="border border-black bg-white text-[9px] font-bold uppercase">
                       <button
                         type="button"
                         onClick={() => setBaseMemeTab("uploaded")}
-                        className={`py-1 px-2 text-center transition-colors ${
-                          baseMemeTab === "uploaded"
-                            ? "bg-black text-white"
-                            : "text-[#777777] hover:text-black"
-                        }`}
+                        className="w-full py-1 px-2 text-center transition-colors bg-black text-white"
                       >
-                        UPLOADED ({allUploadedMemes.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBaseMemeTab("classic")}
-                        className={`py-1 px-2 text-center transition-colors ${
-                          baseMemeTab === "classic"
-                            ? "bg-black text-white"
-                            : "text-[#777777] hover:text-black"
-                        }`}
-                      >
-                        ALL CLASSICS ({TEMPLATES.length})
+                        COMMUNITY TEMPLATES ({allUploadedMemes.length})
                       </button>
                     </div>
                   </div>
 
                   {/* Grid of Base Memes */}
                   <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-0.5">
-                    {(baseMemeTab === "uploaded" && allUploadedMemes.length > 0
-                      ? allUploadedMemes
-                      : TEMPLATES
-                    )
+                    {allUploadedMemes
                       .filter(
                         (t) =>
                           !baseMemeSearch ||

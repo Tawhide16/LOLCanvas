@@ -9,9 +9,7 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  return TEMPLATES.map((t) => ({
-    id: t.slug,
-  }));
+  return [];
 }
 
 function EditorContent({ params }: { params: Promise<{ id: string }> }) {

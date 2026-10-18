@@ -179,7 +179,16 @@ export default function LoginPage() {
     window.location.reload();
   };
 
-  const demoFavorites = TEMPLATES.slice(0, 3);
+  const [demoFavorites, setDemoFavorites] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lolcanvas_saved_templates");
+      if (saved) {
+        setDemoFavorites(JSON.parse(saved).slice(0, 3));
+      }
+    } catch (e) {}
+  }, []);
 
   return (
     <div className="flex flex-col w-full bg-[#FAF9F5] min-h-[calc(100vh-140px)]">
@@ -299,25 +308,37 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {demoFavorites.map((t) => (
-                <div key={t.id} className="bg-white border border-black p-3 space-y-2">
-                  <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center">
-                    <img src={t.svgDataUri} alt={t.title} className="max-h-full max-w-full object-contain" />
+            {demoFavorites.length === 0 ? (
+              <div className="p-8 text-center bg-white border border-black font-mono-code text-xs text-[#777777] uppercase space-y-2">
+                <p>NO BOOKMARKED TEMPLATES YET</p>
+                <Link
+                  href="/cards"
+                  className="inline-block px-3 py-1.5 bg-black text-white hover:bg-[#333333] font-bold"
+                >
+                  EXPLORE ARCHIVE →
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {demoFavorites.map((t) => (
+                  <div key={t.id} className="bg-white border border-black p-3 space-y-2">
+                    <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/15 p-2 flex items-center justify-center">
+                      <img src={t.svgDataUri} alt={t.title} className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="font-display font-bold text-xs uppercase text-black truncate">
+                      {t.title}
+                    </div>
+                    <Link
+                      href={`/edit/${t.slug}`}
+                      className="w-full py-1.5 bg-black text-white hover:bg-[#333333] font-mono-code text-[11px] font-bold uppercase text-center flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <Wand2 className="w-3 h-3" />
+                      OPEN IN CANVAS
+                    </Link>
                   </div>
-                  <div className="font-display font-bold text-xs uppercase text-black truncate">
-                    {t.title}
-                  </div>
-                  <Link
-                    href={`/edit/${t.slug}`}
-                    className="w-full py-1.5 bg-black text-white hover:bg-[#333333] font-mono-code text-[11px] font-bold uppercase text-center flex items-center justify-center gap-1 transition-colors"
-                  >
-                    <Wand2 className="w-3 h-3" />
-                    OPEN IN CANVAS
-                  </Link>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (

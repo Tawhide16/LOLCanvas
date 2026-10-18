@@ -457,7 +457,7 @@ export default function TemplateGrid({
             className="px-3.5 py-1.5 bg-[#E11D48] text-white hover:bg-black font-bold uppercase transition-colors border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>{showUploadModal ? "CLOSE FORM" : "+ UPLOAD TEMPLATE CARD"}</span>
+            <span>{showUploadModal ? "CLOSE FORM" : "UPLOAD TEMPLATE CARD"}</span>
           </button>
         </div>
       )}
