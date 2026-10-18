@@ -1,21 +1,50 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, UploadCloud } from "lucide-react";
+import { useSiteContent } from "@/lib/useSiteContent";
+import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 export default function SubmissionCallout() {
+  const { content } = useSiteContent();
+
   return (
     <section className="w-full bg-black text-white border-b border-black">
       <div className="p-8 sm:p-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="space-y-2 max-w-xl">
-          <div className="inline-flex items-center gap-2 text-[10px] font-mono-code uppercase tracking-wider text-[#E11D48] font-bold">
-            <span className="w-1.5 h-1.5 bg-[#E11D48] animate-pulse"></span>
-            OPEN COMMONS INGESTION
-          </div>
-          <h2 className="font-display font-extrabold text-2xl sm:text-3xl uppercase tracking-tight text-white">
-            SUBMIT TO THE COMMONS.
-          </h2>
-          <p className="font-body text-xs sm:text-sm text-[#AAAAAA]">
-            Contribute clean, uncaptioned meme templates. Published watermark-free for creators worldwide.
-          </p>
+          <SuperAdminInlineEdit
+            field="submissionBadge"
+            label="Commons Callout Badge"
+            value={content.submissionBadge}
+          >
+            <div className="inline-flex items-center gap-2 text-[10px] font-mono-code uppercase tracking-wider text-[#E11D48] font-bold">
+              <span className="w-1.5 h-1.5 bg-[#E11D48] animate-pulse"></span>
+              {content.submissionBadge}
+            </div>
+          </SuperAdminInlineEdit>
+
+          <SuperAdminInlineEdit
+            field="submissionTitle"
+            label="Commons Callout Headline"
+            value={content.submissionTitle}
+            asBlock
+          >
+            <h2 className="font-display font-extrabold text-2xl sm:text-3xl uppercase tracking-tight text-white">
+              {content.submissionTitle}
+            </h2>
+          </SuperAdminInlineEdit>
+
+          <SuperAdminInlineEdit
+            field="submissionSubtitle"
+            label="Commons Callout Subtitle"
+            value={content.submissionSubtitle}
+            multiline
+            asBlock
+          >
+            <p className="font-body text-xs sm:text-sm text-[#AAAAAA]">
+              {content.submissionSubtitle}
+            </p>
+          </SuperAdminInlineEdit>
         </div>
 
         <Link

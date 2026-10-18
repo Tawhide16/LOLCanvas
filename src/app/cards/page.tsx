@@ -4,8 +4,11 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import TemplateGrid from "@/components/archive/TemplateGrid";
 import { Database } from "lucide-react";
+import { useSiteContent } from "@/lib/useSiteContent";
+import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 function CardsContent() {
+  const { content } = useSiteContent();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "all";
   const initialSearch = searchParams.get("q") || "";
@@ -19,14 +22,27 @@ function CardsContent() {
             <Database className="w-3 h-3 text-[#E11D48]" />
             TEMPLATE REPOSITORY
           </div>
-          <h1 className="font-display font-extrabold text-2xl sm:text-4xl uppercase tracking-tight text-black">
-            ARCHIVE CATALOG.
-          </h1>
+          <SuperAdminInlineEdit
+            field="catalogTitle"
+            label="Archive Catalog Title"
+            value={content.catalogTitle}
+            asBlock
+          >
+            <h1 className="font-display font-extrabold text-2xl sm:text-4xl uppercase tracking-tight text-black">
+              {content.catalogTitle}
+            </h1>
+          </SuperAdminInlineEdit>
         </div>
 
-        <span className="font-mono-code text-xs text-[#555555] hidden sm:inline">
-          100% UNMARKED ASSETS
-        </span>
+        <SuperAdminInlineEdit
+          field="catalogSubtitle"
+          label="Archive Subtitle Tag"
+          value={content.catalogSubtitle}
+        >
+          <span className="font-mono-code text-xs text-[#555555] hidden sm:inline">
+            {content.catalogSubtitle}
+          </span>
+        </SuperAdminInlineEdit>
       </div>
 
       {/* Grid with Filters */}

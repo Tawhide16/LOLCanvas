@@ -2,9 +2,65 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const DEFAULT_SITE_CONFIG = {
+  // Brand & Logo
   logoUrl: "/logo-icon.png",
   logoText: "LOLCANVAS",
   logoTag: "®",
+
+  // Top Bar & Navbar
+  topBarTitle: "LOLCANVAS® ARCHIVE",
+  topBarBadge: "100% WATERMARK-FREE",
+  topBarEmail: "DESK@LOLCANVAS.STUDIO",
+
+  // Home Hero Banner
+  heroBadge: "OPEN MEME ARCHIVE & CANVAS ENGINE",
+  heroTitle1: "MEMES THAT",
+  heroTitle2: "MAKE NOISE.",
+  heroSubtitle:
+    "Editorial, watermark-free template archive and in-browser canvas editor. Clean PNG exports without forced stamps.",
+  heroMetric1Label: "TEMPLATES",
+  heroMetric1Value: "24K+",
+  heroMetric2Label: "WATERMARKS",
+  heroMetric2Value: "0%",
+  heroMetric3Label: "TAXONOMIES",
+  heroMetric3Value: "08",
+  heroMetric4Label: "EXPORT",
+  heroMetric4Value: "LOCAL",
+  manifestoTag: "STUDIO MANIFESTO",
+  manifestoQuote: "GOOD MEMES AREN’T JUST FUNNY. THEY ARE CULTURE.",
+
+  // Submission Callout Strip
+  submissionBadge: "PUBLIC COMMONS",
+  submissionTitle: "SUBMIT TO THE ARCHIVE.",
+  submissionSubtitle:
+    "Join verified creators uploading watermark-free formats. Every contribution is reviewed, standardized, and made available freely.",
+
+  // Categories Page (/collection)
+  collectionTag: "CATEGORIES (01–08)",
+  collectionTitle: "CATEGORY INDEX.",
+  collectionSubtitle:
+    "Explore curated meme taxonomy archives with real-time community uploaded card references and suggestions ready for the canvas editor.",
+
+  // Catalog / Cards Page (/cards)
+  catalogTag: "TEMPLATE REPOSITORY",
+  catalogTitle: "ARCHIVE CATALOG.",
+  catalogSubtitle: "100% UNMARKED ASSETS",
+
+  // Contact Page (/contact)
+  contactTag: "COMMUNICATION DESK",
+  contactTitle: "CONTACT DESK.",
+  contactSubtitle:
+    "Report bugs, request features, submit templates, or reach the engineering team.",
+  contactEmail: "DESK@LOLCANVAS.STUDIO",
+  bugsEmail: "BUGS@LOLCANVAS.STUDIO",
+
+  // Footer
+  footerDescription:
+    "Editorial, watermark-free meme template archive and in-browser canvas editor.",
+  footerCopyright: "© 2026 LOLCANVAS ARCHIVE PROJECT",
+  footerStatus: "STATUS: OPERATIONAL",
+
+  // Developer Profile & About
   developerProfile: {
     name: "Tawhid",
     role: "Lead Full-Stack Software Engineer & Creator",
@@ -91,6 +147,7 @@ export async function POST(req: NextRequest) {
       developerProfile,
       aboutContent,
       adminEmail,
+      ...customContent
     } = body;
 
     // Verify admin privileges
@@ -111,6 +168,7 @@ export async function POST(req: NextRequest) {
     // Merge updates
     const updatedConfig = {
       ...inMemoryConfig,
+      ...customContent,
       ...(logoUrl ? { logoUrl } : {}),
       ...(logoText ? { logoText: logoText.trim().toUpperCase() } : {}),
       ...(logoTag !== undefined ? { logoTag } : {}),
@@ -144,7 +202,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Site configuration & about page updated successfully across all roles.",
+      message: "Site configuration and website text content updated successfully across all roles.",
       data: updatedConfig,
     });
   } catch (err: any) {

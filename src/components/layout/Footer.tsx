@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { useSiteContent } from "@/lib/useSiteContent";
+import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 export default function Footer() {
+  const { content } = useSiteContent();
+
   return (
     <footer className="w-full bg-[#000000] text-white border-t border-black">
       {/* 4 Clean Columns */}
@@ -18,9 +23,17 @@ export default function Footer() {
               LOLCANVAS®
             </span>
           </div>
-          <p className="font-body text-[11px] text-[#888888] leading-relaxed">
-            Editorial, watermark-free meme template archive and in-browser canvas editor.
-          </p>
+          <SuperAdminInlineEdit
+            field="footerDescription"
+            label="Footer Description"
+            value={content.footerDescription}
+            multiline
+            asBlock
+          >
+            <p className="font-body text-[11px] text-[#888888] leading-relaxed">
+              {content.footerDescription}
+            </p>
+          </SuperAdminInlineEdit>
         </div>
 
         {/* Col 2 */}
@@ -54,7 +67,7 @@ export default function Footer() {
           </div>
           <ul className="space-y-2 text-[#CCCCCC]">
             <li>
-              <Link href="/edit/drake-hotline" className="hover:text-white hover:underline block">
+              <Link href="/editor" className="hover:text-white hover:underline block">
                 OPEN EDITOR
               </Link>
             </li>
@@ -98,11 +111,24 @@ export default function Footer() {
 
       {/* Clean Bottom Strip */}
       <div className="px-6 py-3 flex items-center justify-between text-[11px] font-mono-code text-[#777777]">
-        <div>© 2026 LOLCANVAS ARCHIVE PROJECT</div>
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 bg-[#10B981]"></span>
-          <span className="text-white">STATUS: OPERATIONAL</span>
-        </div>
+        <SuperAdminInlineEdit
+          field="footerCopyright"
+          label="Footer Copyright"
+          value={content.footerCopyright}
+        >
+          <div>{content.footerCopyright}</div>
+        </SuperAdminInlineEdit>
+
+        <SuperAdminInlineEdit
+          field="footerStatus"
+          label="System Status Text"
+          value={content.footerStatus}
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[#10B981]"></span>
+            <span className="text-white">STATUS: {content.footerStatus}</span>
+          </div>
+        </SuperAdminInlineEdit>
       </div>
     </footer>
   );
