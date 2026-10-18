@@ -124,9 +124,9 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="w-full bg-[#FAF9F5] border-b border-black">
+    <nav className="relative z-50 w-full bg-[#FAF9F5] border-b border-black">
       {/* Connected Desktop Navigation Strip */}
-      <div className="flex items-stretch divide-x divide-black h-14 md:h-16 overflow-x-auto select-none">
+      <div className="flex items-stretch divide-x divide-black h-14 md:h-16 select-none">
         {/* Brand */}
         <div className="flex items-center px-4 md:px-6 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors group shrink-0">
           <Link
@@ -163,11 +163,11 @@ export default function Navbar() {
         </div>
 
         {/* Live Search with Magic Filter */}
-        <div className="relative flex-1 min-w-[200px] flex items-center bg-[#FAF9F5] px-3 md:px-4 focus-within:bg-white transition-colors">
+        <div className="relative flex-1 min-w-[150px] md:min-w-[220px] flex items-center bg-[#FAF9F5] px-3 md:px-4 focus-within:bg-white transition-colors">
           <Search className="w-4 h-4 text-[#777777] shrink-0 mr-2.5" />
           <form
             onSubmit={handleSearchSubmit}
-            className="w-full"
+            className="flex-1 min-w-0"
           >
             <input
               type="text"
@@ -179,9 +179,24 @@ export default function Navbar() {
               }}
               placeholder="SEARCH TEMPLATES (MAGIC FILTER)..."
               aria-label="Search meme templates"
-              className="w-full bg-transparent font-mono-code text-[12px] md:text-[13px] text-black placeholder:text-[#999999] focus:outline-none uppercase tracking-wider"
+              className="w-full bg-transparent font-mono-code text-[12px] md:text-[13px] text-black placeholder:text-[#999999] focus:outline-none uppercase tracking-wider truncate"
             />
           </form>
+
+          {/* Quick Clear Action */}
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setShowSearchDropdown(true);
+              }}
+              className="px-1.5 py-0.5 text-[#777777] hover:text-black font-mono-code text-[11px] shrink-0 transition-colors uppercase font-bold"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
 
           {/* Magic Search & Suggestions Dropdown */}
           <MagicSearchDropdown
