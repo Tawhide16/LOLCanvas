@@ -1,89 +1,107 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useSyncExternalStore, useCallback } from "react";
+
+// In-memory singleton state
+let currentEditMode = false;
+let currentThemeAccent = "#E11D48";
+let initialized = false;
+
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (err) {}
+  });
+}
+
+function initFromStorage() {
+  if (initialized || typeof window === "undefined") return;
+  initialized = true;
+  try {
+    const storedMode = localStorage.getItem("lolcanvas_admin_edit_mode");
+    if (storedMode === "true") currentEditMode = true;
+    const storedAccent = localStorage.getItem("lolcanvas_theme_accent");
+    if (storedAccent) currentThemeAccent = storedAccent;
+  } catch (e) {}
+}
+
+const editModeStore = {
+  subscribe(listener: () => void) {
+    initFromStorage();
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  getSnapshot() {
+    initFromStorage();
+    return currentEditMode;
+  },
+  getServerSnapshot() {
+    return false;
+  },
+};
+
+const themeAccentStore = {
+  subscribe(listener: () => void) {
+    initFromStorage();
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  getSnapshot() {
+    initFromStorage();
+    return currentThemeAccent;
+  },
+  getServerSnapshot() {
+    return "#E11D48";
+  },
+};
 
 export function useAdminEditMode() {
-  const [isEditMode, setIsEditModeState] = useState<boolean>(false);
-  const [themeAccent, setThemeAccentState] = useState<string>("#E11D48");
-  const [mounted, setMounted] = useState<boolean>(false);
+  const isEditMode = useSyncExternalStore(
+    editModeStore.subscribe,
+    editModeStore.getSnapshot,
+    editModeStore.getServerSnapshot
+  );
 
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const stored = localStorage.getItem("lolcanvas_admin_edit_mode");
-      if (stored === "true") {
-        setIsEditModeState(true);
-      }
-      const storedAccent = localStorage.getItem("lolcanvas_theme_accent");
-      if (storedAccent) {
-        setThemeAccentState(storedAccent);
-      }
-    } catch (e) {}
-
-    const handleModeChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ isEditMode: boolean }>;
-      if (customEvent.detail && typeof customEvent.detail.isEditMode === "boolean") {
-        setIsEditModeState(customEvent.detail.isEditMode);
-      }
-    };
-
-    const handleThemeChange = (e: Event) => {
-      const customEvent = e as CustomEvent<{ accent: string }>;
-      if (customEvent.detail?.accent) {
-        setThemeAccentState(customEvent.detail.accent);
-      }
-    };
-
-    window.addEventListener("lolcanvas_admin_edit_mode_changed", handleModeChange);
-    window.addEventListener("lolcanvas_theme_changed", handleThemeChange);
-
-    return () => {
-      window.removeEventListener("lolcanvas_admin_edit_mode_changed", handleModeChange);
-      window.removeEventListener("lolcanvas_theme_changed", handleThemeChange);
-    };
-  }, []);
+  const themeAccent = useSyncExternalStore(
+    themeAccentStore.subscribe,
+    themeAccentStore.getSnapshot,
+    themeAccentStore.getServerSnapshot
+  );
 
   const setEditMode = useCallback((active: boolean) => {
-    setIsEditModeState(active);
+    currentEditMode = active;
     try {
       localStorage.setItem("lolcanvas_admin_edit_mode", active ? "true" : "false");
     } catch (e) {}
-    window.dispatchEvent(
-      new CustomEvent("lolcanvas_admin_edit_mode_changed", {
-        detail: { isEditMode: active },
-      })
-    );
+    notify();
   }, []);
 
   const toggleEditMode = useCallback(() => {
-    setIsEditModeState((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("lolcanvas_admin_edit_mode", next ? "true" : "false");
-      } catch (e) {}
-      window.dispatchEvent(
-        new CustomEvent("lolcanvas_admin_edit_mode_changed", {
-          detail: { isEditMode: next },
-        })
-      );
-      return next;
-    });
+    const next = !currentEditMode;
+    currentEditMode = next;
+    try {
+      localStorage.setItem("lolcanvas_admin_edit_mode", next ? "true" : "false");
+    } catch (e) {}
+    notify();
   }, []);
 
   const setThemeAccent = useCallback((color: string) => {
-    setThemeAccentState(color);
+    currentThemeAccent = color;
     try {
       localStorage.setItem("lolcanvas_theme_accent", color);
     } catch (e) {}
-    window.dispatchEvent(
-      new CustomEvent("lolcanvas_theme_changed", {
-        detail: { accent: color },
-      })
-    );
+    notify();
   }, []);
 
   return {
-    isEditMode: mounted ? isEditMode : false,
+    isEditMode,
     themeAccent,
     setEditMode,
     toggleEditMode,

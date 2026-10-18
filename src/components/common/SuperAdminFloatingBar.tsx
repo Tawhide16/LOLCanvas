@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Crown,
@@ -33,10 +32,10 @@ export default function SuperAdminFloatingBar({
     setMounted(true);
   }, []);
 
-  if (!mounted || !isAdmin || typeof document === "undefined") return null;
+  if (!mounted || !isAdmin) return null;
 
   if (isMinimized) {
-    return createPortal(
+    return (
       <div className="fixed bottom-3 right-3 z-[9998] font-mono-code">
         <button
           type="button"
@@ -48,12 +47,11 @@ export default function SuperAdminFloatingBar({
           <span className="hidden sm:inline">SUPER ADMIN</span>
           <ChevronUp className="w-3.5 h-3.5" />
         </button>
-      </div>,
-      document.body
+      </div>
     );
   }
 
-  return createPortal(
+  return (
     <aside
       aria-label="Super Admin Controls"
       className="fixed bottom-3 left-1/2 -translate-x-1/2 z-[9998] font-mono-code text-xs max-w-[95vw] select-none animate-in fade-in slide-in-from-bottom-3 duration-200"
@@ -138,7 +136,6 @@ export default function SuperAdminFloatingBar({
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
-    </aside>,
-    document.body
+    </aside>
   );
 }
