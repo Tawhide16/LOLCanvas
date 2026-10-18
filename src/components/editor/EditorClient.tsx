@@ -82,50 +82,8 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   const router = useRouter();
   const siteLogo = useSiteLogo();
 
-  const getInitialCustom = (): { template: Template; bg: string } | null => {
-    if (typeof window === "undefined" || !templateSlug) return null;
-    try {
-      const stored = sessionStorage.getItem(`lolcanvas_template_${templateSlug}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed) {
-          const bg = parsed.svgDataUri || parsed.originalUrl;
-          return {
-            template: {
-              id: parsed.id,
-              slug: parsed.slug || parsed.id,
-              index: parsed.index || "№ 0000",
-              title: parsed.title || "CUSTOM MEME",
-              categoryId: parsed.categoryId || parsed.category || "classic",
-              categoryName: (parsed.categoryName || parsed.category || "classic").toUpperCase(),
-              format: "classic",
-              formatLabel: "Custom Format",
-              remixCount: parsed.remixCount || 100,
-              downloadCount: parsed.downloadCount || 50,
-              createdAt: parsed.createdAt || new Date().toISOString(),
-              source: "Community Upload",
-              license: "Free to remix",
-              aspectRatio: `${parsed.width || 1080}:${parsed.height || 1080}`,
-              width: parsed.width || 1080,
-              height: parsed.height || 1080,
-              defaultTopText: parsed.defaultTopText || "",
-              defaultBottomText: parsed.defaultBottomText || "",
-              svgDataUri: parsed.svgDataUri || bg,
-              originalUrl: parsed.originalUrl || bg,
-              isWatermarkFree: true,
-              tags: parsed.tags || [],
-            },
-            bg,
-          };
-        }
-      }
-    } catch (e) {}
-    return null;
-  };
-
-  const cachedCustom = getInitialCustom();
   const staticFound = TEMPLATES.find((t) => t.slug === templateSlug || t.id === templateSlug);
-  const initialTemplate = staticFound || cachedCustom?.template || TEMPLATES[0] || BLANK_TEMPLATE;
+  const initialTemplate = staticFound || BLANK_TEMPLATE;
 
   const [activeCategory, setActiveCategory] = useState<MainCategory>("meme");
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(initialTemplate);
@@ -133,9 +91,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   const [canvasWidth, setCanvasWidth] = useState<number>(initialTemplate?.width || 1080);
   const [canvasHeight, setCanvasHeight] = useState<number>(initialTemplate?.height || 1080);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [customBgImage, setCustomBgImage] = useState<string | null>(
-    staticFound ? null : cachedCustom ? cachedCustom.bg : null
-  );
+  const [customBgImage, setCustomBgImage] = useState<string | null>(null);
 
   // Custom size form state
   const [customWInput, setCustomWInput] = useState<string>("1080");
@@ -304,6 +260,46 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
       setCustomBgImage(null);
       return;
     }
+
+    // 1. Instant check from sessionStorage on client mount
+    try {
+      const stored = sessionStorage.getItem(`lolcanvas_template_${templateSlug}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed) {
+          const bg = parsed.svgDataUri || parsed.originalUrl;
+          const cachedTpl: Template = {
+            id: parsed.id,
+            slug: parsed.slug || parsed.id,
+            index: parsed.index || "№ 0000",
+            title: parsed.title || "CUSTOM MEME",
+            categoryId: parsed.categoryId || parsed.category || "classic",
+            categoryName: (parsed.categoryName || parsed.category || "classic").toUpperCase(),
+            format: "classic",
+            formatLabel: "Custom Format",
+            remixCount: parsed.remixCount || 100,
+            downloadCount: parsed.downloadCount || 50,
+            createdAt: parsed.createdAt || new Date().toISOString(),
+            source: "Community Upload",
+            license: "Free to remix",
+            aspectRatio: `${parsed.width || 1080}:${parsed.height || 1080}`,
+            width: parsed.width || 1080,
+            height: parsed.height || 1080,
+            defaultTopText: parsed.defaultTopText || "",
+            defaultBottomText: parsed.defaultBottomText || "",
+            svgDataUri: parsed.svgDataUri || bg,
+            originalUrl: parsed.originalUrl || bg,
+            isWatermarkFree: true,
+            tags: parsed.tags || [],
+          };
+          setCurrentTemplate(cachedTpl);
+          setCustomBgImage(bg);
+          setActivePresetName(cachedTpl.title);
+          if (parsed.width) setCanvasWidth(parsed.width);
+          if (parsed.height) setCanvasHeight(parsed.height);
+        }
+      }
+    } catch (e) {}
 
     async function fetchCustomTemplate() {
       try {
@@ -840,12 +836,18 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
             </span>
           </Link>
 
-          <div className="hidden sm:flex items-center gap-2 border-l border-black/20 pl-4">
+          <div className="hidden sm:flex items-center gap-2 border-l border-black/20 pl-4" suppressHydrationWarning>
             <span className="text-[#777777] uppercase text-[11px]">WORKSPACE:</span>
-            <span className="font-bold text-black uppercase truncate max-w-[200px]">
+            <span
+              suppressHydrationWarning
+              className="font-bold text-black uppercase truncate max-w-[200px]"
+            >
               {activePresetName}
             </span>
-            <span className="bg-[#E6E4DC] text-black px-2 py-0.5 text-[10px] font-bold border border-black/30">
+            <span
+              suppressHydrationWarning
+              className="bg-[#E6E4DC] text-black px-2 py-0.5 text-[10px] font-bold border border-black/30"
+            >
               {canvasWidth} × {canvasHeight} PX
             </span>
           </div>
