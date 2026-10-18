@@ -1,5 +1,4 @@
 import EditorClient from "@/components/editor/EditorClient";
-import { TEMPLATES } from "@/lib/data";
 import { Suspense, use } from "react";
 
 export const instant = false;
@@ -8,9 +7,6 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export function generateStaticParams() {
-  return [];
-}
 
 function EditorContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
