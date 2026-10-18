@@ -118,7 +118,7 @@ export default function Navbar() {
   const navLinks = [
     { label: "TEMPLATES", href: "/cards" },
     { label: "CATEGORIES", href: "/collection" },
-    { label: "CANVAS EDITOR", href: "/edit/drake-hotline", isEditor: true },
+    { label: "CANVAS EDITOR", href: "/edit", isEditor: true },
     { label: "ABOUT", href: "/about" },
     { label: "CONTACT", href: "/contact" },
   ];
@@ -231,8 +231,7 @@ export default function Navbar() {
           className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-black hover:text-white transition-colors shrink-0 font-mono-code text-[12px] font-bold tracking-wider group"
         >
           <Plus className="w-4 h-4 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-          <span className="hidden sm:inline">+ UPLOAD</span>
-          <span className="sm:hidden">+</span>
+          <span className="hidden sm:inline">UPLOAD</span>
         </Link>
 
         {/* Super Admin Portal Cell (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
