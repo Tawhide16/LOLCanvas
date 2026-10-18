@@ -3,6 +3,8 @@ import CollectionClient from "@/components/collection/CollectionClient";
 import { getTemplates } from "@/modules/templates/template.service";
 import { Template } from "@/types";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Categories Index — LOLCanvas® | Curated Meme Taxonomies & Community References",
   description:
