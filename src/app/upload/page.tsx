@@ -1,17 +1,34 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { UploadCloud, CheckCircle2, Loader2, Sparkles, Plus, X, Tag, SlidersHorizontal } from "lucide-react";
 import { CATEGORIES } from "@/lib/data";
 import { FormatType } from "@/types";
 import { processImageForWeb } from "@/lib/imageOptimizer";
 
-export default function UploadPage() {
+function UploadForm() {
+  const searchParams = useSearchParams();
+  const initialCatParam = searchParams.get("category");
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [categoryId, setCategoryId] = useState("01");
+  const [categoryId, setCategoryId] = useState(() => {
+    if (initialCatParam) {
+      const found = CATEGORIES.find(
+        (c) =>
+          c.id === initialCatParam ||
+          c.slug === initialCatParam ||
+          c.name.toLowerCase() === initialCatParam.toLowerCase()
+      );
+      if (found) return found.id;
+      if (initialCatParam.startsWith("custom:")) return initialCatParam;
+      return `custom:${initialCatParam}`;
+    }
+    return "01";
+  });
   const [format, setFormat] = useState<string>("classic");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -575,3 +592,12 @@ export default function UploadPage() {
     </div>
   );
 }
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div className="p-12 font-mono-code text-xs text-black">INITIALIZING INGESTION DESK...</div>}>
+      <UploadForm />
+    </Suspense>
+  );
+}
+
