@@ -125,7 +125,14 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTrendingTemplates(mergeUserUploads(parsed));
+          const hasOldMockSvgs = parsed.some(
+            (p: any) => typeof p.svgDataUri === "string" && p.svgDataUri.includes("<svg") && p.svgDataUri.includes("<circle")
+          );
+          if (hasOldMockSvgs) {
+            localStorage.removeItem("lolcanvas_cached_templates");
+          } else {
+            setTrendingTemplates(mergeUserUploads(parsed));
+          }
         }
       }
     } catch (e) {}

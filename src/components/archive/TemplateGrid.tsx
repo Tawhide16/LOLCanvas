@@ -130,8 +130,16 @@ export default function TemplateGrid({
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setTemplates((prev) => mergeUserUploads(prev.length === 0 ? parsed : prev));
-            setIsLoadingTemplates(false);
+            const hasOldMockSvgs = parsed.some(
+              (p: any) => typeof p.svgDataUri === "string" && p.svgDataUri.includes("<svg") && p.svgDataUri.includes("<circle")
+            );
+            if (hasOldMockSvgs) {
+              localStorage.removeItem("lolcanvas_cached_templates");
+              setTemplates((prev) => mergeUserUploads(prev));
+            } else {
+              setTemplates((prev) => mergeUserUploads(prev.length === 0 ? parsed : prev));
+              setIsLoadingTemplates(false);
+            }
           }
         } else {
           setTemplates((prev) => mergeUserUploads(prev));

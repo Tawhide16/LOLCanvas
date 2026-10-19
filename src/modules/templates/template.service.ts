@@ -4,6 +4,7 @@ import { TEMPLATES } from "@/lib/data";
 import { TemplateQueryInput, CreateTemplateInput } from "./template.schema";
 import { JWTPayload } from "../auth/auth.jwt";
 import { hasPermission } from "../auth/auth.rbac";
+import { IN_MEMORY_MEMES } from "../memes/meme.service";
 
 const CACHE_TTL_SECONDS = 60; // Cache templates for 60 seconds
 
@@ -160,7 +161,9 @@ export async function getTemplates(query: TemplateQueryInput) {
   const existingTitles = new Set(results.map((r) => r.title.toLowerCase().trim()));
   const existingIds = new Set(results.map((r) => r.id));
 
-  for (const m of publicMemes) {
+  const allMemesToMerge = [...IN_MEMORY_MEMES, ...publicMemes];
+
+  for (const m of allMemesToMerge) {
     if (!m.previewUrl) continue;
     const titleKey = m.title.toLowerCase().trim();
     if (existingTitles.has(titleKey) || existingIds.has(m.id)) continue;
@@ -175,7 +178,7 @@ export async function getTemplates(query: TemplateQueryInput) {
       format: "classic",
       formatLabel: "Community Upload",
       svgDataUri: m.previewUrl,
-      originalUrl: undefined,
+      originalUrl: m.previewUrl,
       width: m.width || 1080,
       height: m.height || 1080,
       aspectRatio: `${m.width || 1080}:${m.height || 1080}`,
@@ -186,10 +189,11 @@ export async function getTemplates(query: TemplateQueryInput) {
       trendingRank: 1,
       remixCount: m.downloads || 1500,
       downloadCount: m.downloads || 800,
-      createdAt: m.createdAt.toISOString(),
+      createdAt: (m.createdAt instanceof Date ? m.createdAt : new Date()).toISOString(),
       authorEmail: m.author?.email || null,
     });
     existingTitles.add(titleKey);
+    existingIds.add(m.id);
   }
 
   // Sort newest first
