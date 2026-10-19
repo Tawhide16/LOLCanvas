@@ -99,7 +99,12 @@ function UploadForm() {
   const handleFileChange = (selectedFile: File) => {
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
     if (!validTypes.includes(selectedFile.type)) {
-      alert("Please upload JPG, PNG, WebP, or SVG.");
+      alert("Invalid format: Please upload a JPG, PNG, WebP, or SVG image file.");
+      return;
+    }
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      alert("File size exceeds 10MB limit. Please choose an image smaller than 10MB.");
       return;
     }
     setFile(selectedFile);

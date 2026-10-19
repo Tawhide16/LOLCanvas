@@ -74,7 +74,7 @@ export default function Footer() {
           </div>
           <ul className="space-y-2 text-[#CCCCCC]">
             <li>
-              <Link href="/editor" className="hover:text-white hover:underline block">
+              <Link href="/edit" className="hover:text-white hover:underline block">
                 OPEN EDITOR
               </Link>
             </li>
@@ -94,7 +94,7 @@ export default function Footer() {
         {/* Col 4 */}
         <div className="p-6 space-y-3 font-mono-code text-xs">
           <div className="text-[10px] text-[#666666] uppercase tracking-wider">
-            STUDIO
+            STUDIO & LEGAL
           </div>
           <ul className="space-y-2 text-[#CCCCCC]">
             <li>
@@ -104,12 +104,22 @@ export default function Footer() {
             </li>
             <li>
               <Link href="/contact" className="hover:text-white hover:underline block">
-                CONTACT DESK
+                CONTACT & REPORT
               </Link>
             </li>
             <li>
-              <Link href="/login" className="hover:text-white hover:underline block">
-                CREATOR PORTAL
+              <Link href="/privacy" className="hover:text-white hover:underline block">
+                PRIVACY POLICY
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="hover:text-white hover:underline block">
+                TERMS OF SERVICE
+              </Link>
+            </li>
+            <li>
+              <Link href="/dmca" className="hover:text-white hover:underline block">
+                DMCA / TAKEDOWN
               </Link>
             </li>
           </ul>
@@ -117,14 +127,24 @@ export default function Footer() {
       </div>
 
       {/* Clean Bottom Strip */}
-      <div className="px-6 py-3 flex items-center justify-between text-[11px] font-mono-code text-[#777777]">
-        <SuperAdminInlineEdit
-          field="footerCopyright"
-          label="Footer Copyright"
-          value={content.footerCopyright}
-        >
-          <div>{content.footerCopyright}</div>
-        </SuperAdminInlineEdit>
+      <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono-code text-[#777777]">
+        <div className="flex flex-wrap items-center gap-4">
+          <SuperAdminInlineEdit
+            field="footerCopyright"
+            label="Footer Copyright"
+            value={content.footerCopyright}
+          >
+            <div>{content.footerCopyright}</div>
+          </SuperAdminInlineEdit>
+          <div className="hidden sm:flex items-center gap-3 text-[10px] text-[#666666]">
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-white transition-colors">PRIVACY</Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-white transition-colors">TERMS</Link>
+            <span>•</span>
+            <Link href="/dmca" className="hover:text-white transition-colors">DMCA</Link>
+          </div>
+        </div>
 
         <SuperAdminInlineEdit
           field="footerStatus"
@@ -133,7 +153,9 @@ export default function Footer() {
         >
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[#10B981]"></span>
-            <span className="text-white">STATUS: {content.footerStatus}</span>
+            <span className="text-white">
+              STATUS: {(content.footerStatus || "OPERATIONAL").replace(/^STATUS:\s*/i, "")}
+            </span>
           </div>
         </SuperAdminInlineEdit>
       </div>

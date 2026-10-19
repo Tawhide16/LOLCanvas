@@ -19,7 +19,7 @@ export const DEFAULT_SITE_CONFIG = {
   heroSubtitle:
     "Editorial, watermark-free template archive and in-browser canvas editor. Clean PNG exports without forced stamps.",
   heroMetric1Label: "TEMPLATES",
-  heroMetric1Value: "24K+",
+  heroMetric1Value: "26+",
   heroMetric2Label: "WATERMARKS",
   heroMetric2Value: "0%",
   heroMetric3Label: "TAXONOMIES",
@@ -58,7 +58,7 @@ export const DEFAULT_SITE_CONFIG = {
   footerDescription:
     "Editorial, watermark-free meme template archive and in-browser canvas editor.",
   footerCopyright: "© 2026 LOLCANVAS ARCHIVE PROJECT",
-  footerStatus: "STATUS: OPERATIONAL",
+  footerStatus: "OPERATIONAL",
 
   // Developer Profile & About
   developerProfile: {

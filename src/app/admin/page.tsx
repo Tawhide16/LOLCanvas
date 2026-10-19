@@ -726,7 +726,7 @@ export default function AdminPage() {
                   </button>
 
                   <Link
-                    href="/editor"
+                    href="/edit"
                     className="w-full py-2.5 px-3 bg-white border border-black hover:bg-[#FAF9F5] font-bold uppercase text-left flex items-center justify-between transition-colors"
                   >
                     <span>OPEN MEME STUDIO EDITOR</span>

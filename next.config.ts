@@ -12,6 +12,20 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/editor",
+        destination: "/edit",
+        permanent: true,
+      },
+      {
+        source: "/editor/:slug*",
+        destination: "/edit/:slug*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

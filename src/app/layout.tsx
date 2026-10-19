@@ -26,19 +26,48 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://lol-canvas.vercel.app"),
   title: "LOLCanvas® — Memes That Make Noise | Studio & Archive",
   description:
-    "An editorial, watermark-free meme template archive and in-browser canvas editor built around a Swiss architectural grid and modern neo-brutalist visual language.",
-  keywords: [
-    "meme generator",
-    "watermark-free",
-    "meme templates",
-    "canvas editor",
-    "neo-brutalist design",
-    "open archive",
-  ],
+    "Editorial, watermark-free meme template archive and in-browser canvas editor built around a Swiss architectural grid and modern neo-brutalist visual language.",
   icons: {
     icon: "/logo-icon.png",
+    apple: "/logo-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://lol-canvas.vercel.app",
+    siteName: "LOLCanvas",
+    title: "LOLCanvas® — Memes That Make Noise | Studio & Archive",
+    description:
+      "Editorial, watermark-free meme template archive and in-browser canvas editor. High-resolution exports without forced watermarks.",
+    images: [
+      {
+        url: "/logo-icon.png",
+        width: 512,
+        height: 512,
+        alt: "LOLCanvas Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "LOLCanvas® — Memes That Make Noise",
+    description:
+      "Editorial, watermark-free meme template archive and in-browser canvas editor.",
+    images: ["/logo-icon.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -102,6 +131,26 @@ export default function RootLayout({
                 }, true);
               } catch(err) {}
             })();`,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "LOLCanvas",
+              url: "https://lol-canvas.vercel.app",
+              description:
+                "Editorial, watermark-free meme template archive and in-browser canvas editor built around a Swiss architectural grid.",
+              applicationCategory: "DesignApplication",
+              operatingSystem: "All",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+              },
+            }),
           }}
         />
       </head>

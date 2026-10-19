@@ -1,10 +1,22 @@
-import EditorClient from "@/components/editor/EditorClient";
+import type { Metadata } from "next";
 import { Suspense, use } from "react";
+import EditorClient from "@/components/editor/EditorClient";
+import { TEMPLATES } from "@/lib/data";
 
 export const instant = false;
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const tpl = TEMPLATES.find((t) => t.slug === id || t.id === id);
+  const name = tpl ? tpl.title : id.replace(/-/g, " ").toUpperCase();
+  return {
+    title: `Edit ${name} — Canvas Meme Studio | LOLCanvas`,
+    description: `Customize ${name} meme format with in-browser layers, custom fonts, stickers, and export watermark-free high-res PNG.`,
+  };
 }
 
 
