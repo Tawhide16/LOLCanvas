@@ -23,11 +23,11 @@ export async function getTemplates(query: TemplateQueryInput) {
     console.warn("Redis read failed, querying database/memory:", err);
   }
 
-  // 2. Query Data from Neon DB in parallel
+  // 2. Query Data from Neon DB in parallel (with 1.5s timeout fallback if DB is unreachable)
   let dbTemplates: any[] = [];
   let publicMemes: any[] = [];
   try {
-    const [templatesResult, memesResult] = await Promise.all([
+    const dbPromise = Promise.all([
       prisma.template.findMany({
         orderBy: { createdAt: "desc" },
         take: 60,
@@ -53,10 +53,16 @@ export async function getTemplates(query: TemplateQueryInput) {
         take: 30,
       }),
     ]);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("DB connection timeout (1500ms)")), 1500)
+    );
+
+    const [templatesResult, memesResult]: any = await Promise.race([dbPromise, timeoutPromise]);
     dbTemplates = templatesResult;
     publicMemes = memesResult;
-  } catch (err) {
-    console.warn("DB query failed, using fallback:", err);
+  } catch (err: any) {
+    console.warn("DB query unavailable, using instant built-in fallback:", err?.message || err);
   }
 
   // Fallback to built-in catalog if DB query returned empty
