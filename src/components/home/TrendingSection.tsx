@@ -84,16 +84,49 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
   useEffect(() => {
     const mergeUserUploads = (incoming: any[]) => {
       try {
+        let userUploads: any[] = [];
         const userUploadsRaw = localStorage.getItem("lolcanvas_user_uploads");
         if (userUploadsRaw) {
-          const userUploads: any[] = JSON.parse(userUploadsRaw);
-          if (Array.isArray(userUploads) && userUploads.length > 0) {
-            const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
-            const cleanUploads = userUploads.filter((u) => !removedIds.includes(u.id) && !removedIds.includes(u.slug));
-            const existingSlugs = new Set(cleanUploads.map((u) => u.slug || u.id));
-            const remaining = incoming.filter((t) => !existingSlugs.has(t.slug) && !existingSlugs.has(t.id));
-            return [...cleanUploads, ...remaining];
-          }
+          try {
+            userUploads = JSON.parse(userUploadsRaw) || [];
+          } catch (e) {}
+        }
+
+        // Auto-recover any community cards saved in lolcanvas_cached_templates
+        const cachedRaw = localStorage.getItem("lolcanvas_cached_templates");
+        if (cachedRaw) {
+          try {
+            const cachedList: any[] = JSON.parse(cachedRaw);
+            if (Array.isArray(cachedList)) {
+              const communityCached = cachedList.filter(
+                (c) =>
+                  c &&
+                  (c.source === "COMMUNITY UPLOAD" ||
+                    c.source === "SUPER ADMIN UPLOAD" ||
+                    Boolean(c.authorEmail) ||
+                    c.formatLabel === "Community Upload" ||
+                    (Array.isArray(c.tags) && c.tags.some((t: string) => t.startsWith("author:") || t === "community_upload")))
+              );
+              if (communityCached.length > 0) {
+                const knownIds = new Set(userUploads.map((u) => u.id || u.slug));
+                for (const cc of communityCached) {
+                  if (!knownIds.has(cc.id) && !knownIds.has(cc.slug)) {
+                    userUploads.push(cc);
+                    knownIds.add(cc.id || cc.slug);
+                  }
+                }
+                localStorage.setItem("lolcanvas_user_uploads", JSON.stringify(userUploads));
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (Array.isArray(userUploads) && userUploads.length > 0) {
+          const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+          const cleanUploads = userUploads.filter((u) => !removedIds.includes(u.id) && !removedIds.includes(u.slug));
+          const existingSlugs = new Set(cleanUploads.map((u) => u.slug || u.id));
+          const remaining = incoming.filter((t) => !existingSlugs.has(t.slug) && !existingSlugs.has(t.id));
+          return [...cleanUploads, ...remaining];
         }
       } catch (e) {}
       return incoming;

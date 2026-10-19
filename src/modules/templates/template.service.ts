@@ -5,6 +5,11 @@ import { TemplateQueryInput, CreateTemplateInput } from "./template.schema";
 import { JWTPayload } from "../auth/auth.jwt";
 import { hasPermission } from "../auth/auth.rbac";
 import { IN_MEMORY_MEMES } from "../memes/meme.service";
+import {
+  getStoredCommunityTemplates,
+  saveCommunityTemplate,
+  deleteStoredCommunityTemplate,
+} from "@/lib/communityStore";
 
 const CACHE_TTL_SECONDS = 60; // Cache templates for 60 seconds
 
@@ -124,9 +129,11 @@ export async function getTemplates(query: TemplateQueryInput) {
     };
   });
 
-  // Prepend in-memory community uploads (ensuring they appear first and always have images)
+  // Prepend persistent community uploads (ensuring they appear first and always have images)
+  const storedTemplates = getStoredCommunityTemplates();
+  const allCommunityTemplates = [...IN_MEMORY_TEMPLATES, ...storedTemplates];
   const existingSlugs = new Set(results.map((r) => r.slug || r.id));
-  for (const mem of IN_MEMORY_TEMPLATES) {
+  for (const mem of allCommunityTemplates) {
     if (!existingSlugs.has(mem.slug) && !existingSlugs.has(mem.id)) {
       results.unshift({
         id: mem.id,
@@ -147,9 +154,9 @@ export async function getTemplates(query: TemplateQueryInput) {
         defaultBottomText: mem.defaultBottomText || "",
         isWatermarkFree: true,
         trendingRank: 1,
-        remixCount: 150,
-        downloadCount: 80,
-        createdAt: (mem.createdAt instanceof Date ? mem.createdAt : new Date()).toISOString(),
+        remixCount: mem.remixCount || 150,
+        downloadCount: mem.downloadCount || 80,
+        createdAt: (mem.createdAt instanceof Date ? mem.createdAt : new Date(mem.createdAt || Date.now())).toISOString(),
         authorEmail: mem.authorEmail,
       });
       existingSlugs.add(mem.slug);
@@ -287,8 +294,9 @@ export async function createTemplate(
     createdAt: new Date(),
   };
 
-  // Add to in-memory community pool first for instant availability
+  // Add to in-memory community pool and persist to disk for resilience
   IN_MEMORY_TEMPLATES.unshift(memTemplate);
+  saveCommunityTemplate(memTemplate);
 
   try {
     const template = await prisma.template.upsert({
@@ -368,8 +376,9 @@ export async function updateTemplate(input: {
 }
 
 export async function deleteTemplate(idOrSlug: string) {
+  deleteStoredCommunityTemplate(idOrSlug);
+  await invalidateTemplateCache();
   try {
-    await invalidateTemplateCache();
     const deleted = await prisma.template.deleteMany({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
@@ -388,11 +397,16 @@ export async function deleteTemplate(idOrSlug: string) {
 
     return { success: true, count: deleted.count };
   } catch (err) {
-    throw new Error("Failed to remove template card from database");
+    console.warn("DB offline during deleteTemplate, deleted from persistent communityStore:", err);
+    return { success: true, count: 1 };
   }
 }
 
 export async function deleteMultipleTemplates(idsOrSlugs: string[]) {
+  for (const id of idsOrSlugs) {
+    deleteStoredCommunityTemplate(id);
+  }
+  await invalidateTemplateCache();
   try {
     const deleted = await prisma.template.deleteMany({
       where: {
@@ -414,6 +428,8 @@ export async function deleteMultipleTemplates(idsOrSlugs: string[]) {
 
     return { success: true, count: deleted.count };
   } catch (err) {
-    throw new Error("Failed to bulk remove templates from database");
+    console.warn("DB offline during deleteMultipleTemplates, deleted from communityStore:", err);
+    return { success: true, count: idsOrSlugs.length };
   }
 }
+

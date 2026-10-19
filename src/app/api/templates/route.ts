@@ -21,9 +21,13 @@ export async function GET(req: NextRequest) {
 
     // Single template lookup with original high-resolution image for downloading
     if (id) {
-      // 1. Check in-memory community templates first
+      // 1. Check in-memory & persistent community templates first
       const { IN_MEMORY_TEMPLATES } = await import("@/modules/templates/template.service");
-      const memFound = IN_MEMORY_TEMPLATES.find((t) => t.id === id || t.slug === id);
+      const { getStoredCommunityTemplates } = await import("@/lib/communityStore");
+      const storedCommunity = getStoredCommunityTemplates();
+      const memFound =
+        IN_MEMORY_TEMPLATES.find((t) => t.id === id || t.slug === id) ||
+        storedCommunity.find((t) => t.id === id || t.slug === id);
       if (memFound) {
         return successResponse(
           { ...memFound, originalUrl: memFound.originalUrl || memFound.svgDataUri },
