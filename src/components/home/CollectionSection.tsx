@@ -31,9 +31,7 @@ export default function CollectionSection() {
           >
             <div className="flex items-center justify-between font-mono-code text-[11px]">
               <span className="font-bold text-[#E11D48]">[{cat.number}]</span>
-              <span className="text-[#888888] text-[10px]">
-                {cat.count >= 1000 ? `${(cat.count / 1000).toFixed(1)}K` : `${cat.count} TPL`}
-              </span>
+              <span className="text-[#888888] text-[10px]">{(cat.count / 1000).toFixed(1)}K</span>
             </div>
 
             <h3 className="font-display font-bold text-xs uppercase text-black group-hover:text-[#E11D48] transition-colors leading-tight">

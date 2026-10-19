@@ -130,22 +130,19 @@ export default function HeroBanner() {
         {/* Right Side (~5/12 width) */}
         <div className="lg:col-span-5 flex flex-col justify-between divide-y divide-black bg-[#FAF9F5]">
           {/* Quick Action Area */}
-          <div className="p-6 sm:p-8 space-y-5 bg-[#FAF9F5]">
-            <div className="flex items-center justify-between text-xs font-mono-code flex-wrap gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#10B981]/10 border border-[#10B981] text-[#065F46] font-bold text-[10px] tracking-wider uppercase">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-                NO LOGIN NEEDED — 100% FREE CANVAS
-              </div>
-              <span className="inline-flex items-center gap-1.5 text-black font-bold text-[11px]">
+          <div className="p-6 sm:p-8 space-y-6 bg-[#FAF9F5]">
+            <div className="flex items-center justify-between text-xs font-mono-code">
+              <span className="text-[#666666]">CANVAS WORKBENCH:</span>
+              <span className="inline-flex items-center gap-1.5 text-black font-bold">
                 <span className="w-2 h-2 bg-[#10B981]"></span>
                 ENGINE READY
               </span>
             </div>
 
             {/* Primary Action Buttons with Micro-Animations */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link
-                href="/edit"
+                href="/editor"
                 className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-4 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase tracking-wider font-bold transition-all shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] hover:translate-y-[-1px] active:translate-y-[1px]"
               >
                 OPEN CANVAS EDITOR ■
@@ -157,118 +154,31 @@ export default function HeroBanner() {
                 BROWSE ARCHIVE →
               </Link>
             </div>
-
-            {/* 5-Second Quick Start Row */}
-            <div className="pt-2 space-y-2 border-t border-black/15">
-              <div className="flex items-center justify-between text-[10px] font-mono-code text-[#666666] uppercase">
-                <span>QUICK START IN 5 SECONDS:</span>
-                <span className="text-[#E11D48] font-bold">1-CLICK REMIX →</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <Link
-                  href="/edit"
-                  className="px-2.5 py-1 bg-white border border-black hover:bg-black hover:text-white text-[11px] font-mono-code font-bold uppercase transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  ⚡ BLANK
-                </Link>
-                <Link
-                  href="/edit/drake-hotline"
-                  className="px-2.5 py-1 bg-white border border-black hover:bg-black hover:text-white text-[11px] font-mono-code font-bold uppercase transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  DRAKE
-                </Link>
-                <Link
-                  href="/edit/distracted-bf"
-                  className="px-2.5 py-1 bg-white border border-black hover:bg-black hover:text-white text-[11px] font-mono-code font-bold uppercase transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  DISTRACTED BF
-                </Link>
-                <Link
-                  href="/edit/two-buttons"
-                  className="px-2.5 py-1 bg-white border border-black hover:bg-black hover:text-white text-[11px] font-mono-code font-bold uppercase transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  TWO BUTTONS
-                </Link>
-                <Link
-                  href="/edit/change-my-mind"
-                  className="px-2.5 py-1 bg-white border border-black hover:bg-black hover:text-white text-[11px] font-mono-code font-bold uppercase transition-colors shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  CHANGE MY MIND
-                </Link>
-              </div>
-            </div>
           </div>
 
-          {/* Visual Interactive Live Meme Studio Preview */}
-          <div className="p-5 sm:p-6 bg-[#0E0E0E] text-white flex flex-col justify-between space-y-3.5 flex-1 border-t border-black group">
-            {/* Studio Toolbar Header */}
-            <div className="flex items-center justify-between font-mono-code text-[11px] text-[#888888] border-b border-[#222222] pb-2">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#EF4444]"></span>
-                <span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
-                <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
-                <span className="text-white font-bold ml-1">CANVAS PREVIEW // 1080×1080</span>
-              </div>
-              <span className="text-[#10B981] font-bold">WATERMARK: 0%</span>
-            </div>
-
-            {/* Interactive Visual Canvas Mockup */}
-            <Link
-              href="/edit/drake-hotline"
-              className="relative block w-full aspect-[16/10] bg-[#1A1A1A] border border-[#333333] shadow-[3px_3px_0px_0px_rgba(225,29,72,0.9)] overflow-hidden transition-all hover:border-white cursor-pointer"
+          {/* Minimalist Neo-brutalist Manifesto Panel */}
+          <div className="p-6 sm:p-10 bg-black text-white flex flex-col justify-center space-y-2 flex-1">
+            <SuperAdminInlineEdit
+              field="manifestoTag"
+              label="Studio Manifesto Tag"
+              value={content.manifestoTag}
             >
-              {/* Visual Split Meme Illustration */}
-              <div className="w-full h-full grid grid-cols-2 divide-x divide-black bg-[#EADBC8]">
-                {/* Disapproval Panel */}
-                <div className="relative p-2.5 flex flex-col justify-between bg-[#F4A261]">
-                  <div className="w-8 h-8 rounded-full bg-[#9C6644] border-2 border-black flex items-center justify-center font-bold text-white text-xs">
-                    ✕
-                  </div>
-                  <div className="bg-black/90 text-white px-2 py-1 font-display font-black text-[10px] sm:text-xs uppercase leading-tight tracking-wider text-center border border-white">
-                    WATERMARKED MEMES
-                  </div>
-                </div>
-                {/* Approval Panel */}
-                <div className="relative p-2.5 flex flex-col justify-between bg-[#E76F51]">
-                  <div className="w-8 h-8 rounded-full bg-[#9C6644] border-2 border-black flex items-center justify-center font-bold text-white text-xs">
-                    ✓
-                  </div>
-                  <div className="bg-black/90 text-[#10B981] px-2 py-1 font-display font-black text-[10px] sm:text-xs uppercase leading-tight tracking-wider text-center border border-[#10B981]">
-                    LOLCANVAS CLEAN PNG
-                  </div>
-                </div>
-              </div>
+              <span className="text-[10px] font-mono-code uppercase tracking-widest text-[#888888]">
+                {content.manifestoTag}
+              </span>
+            </SuperAdminInlineEdit>
 
-              {/* Canvas Selection Bounding Box Mockup */}
-              <div className="absolute inset-x-3 bottom-2 border-2 border-dashed border-[#E11D48] pointer-events-none p-1">
-                <span className="absolute -top-2.5 left-2 bg-[#E11D48] text-white text-[8px] font-mono-code font-bold px-1 uppercase">
-                  ACTIVE TEXT LAYER
-                </span>
-                <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-white border border-black"></span>
-                <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-white border border-black"></span>
-              </div>
-
-              {/* Hover Action Badge */}
-              <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="px-4 py-2 bg-[#E11D48] text-white font-mono-code text-xs font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
-                  CLICK TO REMIX IN CANVAS →
-                </span>
-              </div>
-            </Link>
-
-            {/* Studio Manifesto / Motto Bar */}
-            <div className="pt-1 flex items-center justify-between text-[11px] font-mono-code text-[#AAAAAA]">
-              <SuperAdminInlineEdit
-                field="manifestoQuote"
-                label="Studio Manifesto Quote"
-                value={content.manifestoQuote}
-              >
-                <span className="italic truncate max-w-[240px] sm:max-w-none text-[11px]">
-                  “{content.manifestoQuote.replace(/^["“]|["”]$/g, "")}”
-                </span>
-              </SuperAdminInlineEdit>
-              <span className="text-[#E11D48] font-bold text-[10px] uppercase">100% CLIENT EXPORT</span>
-            </div>
+            <SuperAdminInlineEdit
+              field="manifestoQuote"
+              label="Studio Manifesto Quote"
+              value={content.manifestoQuote}
+              multiline
+              asBlock
+            >
+              <blockquote className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight leading-snug">
+                “{content.manifestoQuote.replace(/^["“]|["”]$/g, '')}”
+              </blockquote>
+            </SuperAdminInlineEdit>
           </div>
         </div>
       </div>
