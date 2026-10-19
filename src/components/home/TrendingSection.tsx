@@ -82,14 +82,41 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
   };
 
   useEffect(() => {
-    // If SSR initialTemplates provided, filter removed templates and avoid duplicate network fetch
+    const mergeUserUploads = (incoming: any[]) => {
+      try {
+        const userUploadsRaw = localStorage.getItem("lolcanvas_user_uploads");
+        if (userUploadsRaw) {
+          const userUploads: any[] = JSON.parse(userUploadsRaw);
+          if (Array.isArray(userUploads) && userUploads.length > 0) {
+            const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+            const cleanUploads = userUploads.filter((u) => !removedIds.includes(u.id) && !removedIds.includes(u.slug));
+            const existingSlugs = new Set(cleanUploads.map((u) => u.slug || u.id));
+            const remaining = incoming.filter((t) => !existingSlugs.has(t.slug) && !existingSlugs.has(t.id));
+            return [...cleanUploads, ...remaining];
+          }
+        }
+      } catch (e) {}
+      return incoming;
+    };
+
+    // Listen for live upload events
+    const handleUploadedEvent = (e: any) => {
+      if (e.detail) {
+        setTrendingTemplates((prev) => [e.detail, ...prev.filter((t) => t.id !== e.detail.id && t.slug !== e.detail.slug)]);
+      }
+    };
+    window.addEventListener("lolcanvas_template_uploaded", handleUploadedEvent);
+
+    // If SSR initialTemplates provided, merge local user uploads and filter removed templates
     if (initialTemplates && initialTemplates.length > 0) {
       const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
       const filtered = initialTemplates.filter(
         (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
       );
-      setTrendingTemplates(filtered);
-      return;
+      setTrendingTemplates(mergeUserUploads(filtered));
+      return () => {
+        window.removeEventListener("lolcanvas_template_uploaded", handleUploadedEvent);
+      };
     }
 
     // Safely check client cache on mount
@@ -98,7 +125,7 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTrendingTemplates(parsed);
+          setTrendingTemplates(mergeUserUploads(parsed));
         }
       }
     } catch (e) {}
@@ -113,12 +140,16 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
             const filtered = data.data.templates.filter(
               (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
             );
-            setTrendingTemplates(filtered);
+            setTrendingTemplates(mergeUserUploads(filtered));
           }
         }
       } catch (err) {}
     }
     loadTrending();
+
+    return () => {
+      window.removeEventListener("lolcanvas_template_uploaded", handleUploadedEvent);
+    };
   }, [initialTemplates]);
 
   if (trendingTemplates.length === 0) return null;
@@ -191,20 +222,27 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                 {/* Full-bleed Top Image with Bookmark Button */}
                 <div className="w-full aspect-square relative overflow-hidden bg-[#FAF9F5] flex items-center justify-center border-b border-black">
                   <Link
-                    href={`/edit/${item.slug}`}
+                    href={`/edit/${item.slug || item.id}`}
                     onClick={() => {
                       try {
-                        sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
+                        sessionStorage.setItem(`lolcanvas_template_${item.slug || item.id}`, JSON.stringify(item));
                         if (item.id) sessionStorage.setItem(`lolcanvas_template_${item.id}`, JSON.stringify(item));
+                        if (item.slug) sessionStorage.setItem(`lolcanvas_template_${item.slug}`, JSON.stringify(item));
                       } catch (e) {}
                     }}
                     className="w-full h-full relative block cursor-pointer"
                   >
                     <img
-                      src={item.svgDataUri}
+                      src={item.svgDataUri || item.previewUrl || item.originalUrl || item.imageUrl || ""}
                       alt={item.title}
                       loading="eager"
                       decoding="async"
+                      onError={(e) => {
+                        const fallback = item.originalUrl || item.previewUrl || item.svgDataUri;
+                        if (fallback && e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
                       className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300"
                     />
                   </Link>

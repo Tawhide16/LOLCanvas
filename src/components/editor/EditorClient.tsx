@@ -261,43 +261,52 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
       return;
     }
 
-    // 1. Instant check from sessionStorage on client mount
+    // 1. Instant check from sessionStorage or localStorage on client mount
     try {
+      let parsed = null;
       const stored = sessionStorage.getItem(`lolcanvas_template_${templateSlug}`);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed) {
-          const bg = parsed.svgDataUri || parsed.originalUrl;
-          const cachedTpl: Template = {
-            id: parsed.id,
-            slug: parsed.slug || parsed.id,
-            index: parsed.index || "№ 0000",
-            title: parsed.title || "CUSTOM MEME",
-            categoryId: parsed.categoryId || parsed.category || "classic",
-            categoryName: (parsed.categoryName || parsed.category || "classic").toUpperCase(),
-            format: "classic",
-            formatLabel: "Custom Format",
-            remixCount: parsed.remixCount || 100,
-            downloadCount: parsed.downloadCount || 50,
-            createdAt: parsed.createdAt || new Date().toISOString(),
-            source: "Community Upload",
-            license: "Free to remix",
-            aspectRatio: `${parsed.width || 1080}:${parsed.height || 1080}`,
-            width: parsed.width || 1080,
-            height: parsed.height || 1080,
-            defaultTopText: parsed.defaultTopText || "",
-            defaultBottomText: parsed.defaultBottomText || "",
-            svgDataUri: parsed.svgDataUri || bg,
-            originalUrl: parsed.originalUrl || bg,
-            isWatermarkFree: true,
-            tags: parsed.tags || [],
-          };
-          setCurrentTemplate(cachedTpl);
-          setCustomBgImage(bg);
-          setActivePresetName(cachedTpl.title);
-          if (parsed.width) setCanvasWidth(parsed.width);
-          if (parsed.height) setCanvasHeight(parsed.height);
+        parsed = JSON.parse(stored);
+      } else {
+        const userUploads = JSON.parse(localStorage.getItem("lolcanvas_user_uploads") || "[]");
+        parsed = userUploads.find((u: any) => u.slug === templateSlug || u.id === templateSlug);
+        if (!parsed) {
+          const cached = JSON.parse(localStorage.getItem("lolcanvas_cached_templates") || "[]");
+          parsed = cached.find((c: any) => c.slug === templateSlug || c.id === templateSlug);
         }
+      }
+
+      if (parsed) {
+        const bg = parsed.svgDataUri || parsed.previewUrl || parsed.originalUrl || parsed.imageUrl;
+        const cachedTpl: Template = {
+          id: parsed.id,
+          slug: parsed.slug || parsed.id,
+          index: parsed.index || "№ 0000",
+          title: parsed.title || "CUSTOM MEME",
+          categoryId: parsed.categoryId || parsed.category || "classic",
+          categoryName: (parsed.categoryName || parsed.category || "classic").toUpperCase(),
+          format: "classic",
+          formatLabel: "Custom Format",
+          remixCount: parsed.remixCount || 100,
+          downloadCount: parsed.downloadCount || 50,
+          createdAt: parsed.createdAt || new Date().toISOString(),
+          source: "Community Upload",
+          license: "Free to remix",
+          aspectRatio: `${parsed.width || 1080}:${parsed.height || 1080}`,
+          width: parsed.width || 1080,
+          height: parsed.height || 1080,
+          defaultTopText: parsed.defaultTopText || "",
+          defaultBottomText: parsed.defaultBottomText || "",
+          svgDataUri: parsed.svgDataUri || bg,
+          originalUrl: parsed.originalUrl || bg,
+          isWatermarkFree: true,
+          tags: parsed.tags || [],
+        };
+        setCurrentTemplate(cachedTpl);
+        setCustomBgImage(bg);
+        setActivePresetName(cachedTpl.title);
+        if (parsed.width) setCanvasWidth(parsed.width);
+        if (parsed.height) setCanvasHeight(parsed.height);
       }
     } catch (e) {}
 
@@ -308,7 +317,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
           const json = await res.json();
           const tpl = json.data;
           if (tpl) {
-            const bg = tpl.svgDataUri || tpl.originalUrl;
+            const bg = tpl.svgDataUri || tpl.previewUrl || tpl.originalUrl || tpl.imageUrl;
             const customTpl: Template = {
               id: tpl.id,
               slug: tpl.slug || tpl.id,

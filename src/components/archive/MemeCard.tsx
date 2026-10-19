@@ -27,7 +27,12 @@ export default function MemeCard({
   const [isSaved, setIsSaved] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const displayImage = template.svgDataUri || (template as any).previewUrl || template.originalUrl || "";
+  const displayImage =
+    template.svgDataUri ||
+    (template as any).previewUrl ||
+    template.originalUrl ||
+    (template as any).imageUrl ||
+    "";
   const [imageLoaded, setImageLoaded] = useState(() => {
     return typeof displayImage === "string" && displayImage.startsWith("data:");
   });
@@ -222,6 +227,13 @@ export default function MemeCard({
             loading="eager"
             decoding="async"
             onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              setImageLoaded(true);
+              const fallback = template.originalUrl || (template as any).previewUrl || template.svgDataUri;
+              if (fallback && e.currentTarget.src !== fallback) {
+                e.currentTarget.src = fallback;
+              }
+            }}
             className="w-full h-full object-cover block group-hover:scale-105 transition-all duration-300 relative z-1"
           />
         </Link>

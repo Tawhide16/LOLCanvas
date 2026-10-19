@@ -21,17 +21,45 @@ export async function GET(req: NextRequest) {
 
     // Single template lookup with original high-resolution image for downloading
     if (id) {
-      const prisma = (await import("@/lib/prisma")).default;
-      const t = await prisma.template.findFirst({
-        where: { OR: [{ id }, { slug: id }] },
-      });
-      if (!t) return errorResponse("Template not found", 404);
-      const originalUrl =
-        t.defaultBottomText &&
-        (t.defaultBottomText.startsWith("data:image") || t.defaultBottomText.startsWith("http"))
-          ? t.defaultBottomText
-          : t.svgDataUri;
-      return successResponse({ ...t, originalUrl }, "Template retrieved successfully");
+      // 1. Check in-memory community templates first
+      const { IN_MEMORY_TEMPLATES } = await import("@/modules/templates/template.service");
+      const memFound = IN_MEMORY_TEMPLATES.find((t) => t.id === id || t.slug === id);
+      if (memFound) {
+        return successResponse(
+          { ...memFound, originalUrl: memFound.originalUrl || memFound.svgDataUri },
+          "Template retrieved successfully"
+        );
+      }
+
+      // 2. Check canonical built-in templates
+      const { TEMPLATES } = await import("@/lib/data");
+      const staticFound = TEMPLATES.find((t) => t.id === id || t.slug === id);
+      if (staticFound) {
+        return successResponse(
+          { ...staticFound, originalUrl: staticFound.originalUrl || staticFound.svgDataUri },
+          "Template retrieved successfully"
+        );
+      }
+
+      // 3. Fallback to database query
+      try {
+        const prisma = (await import("@/lib/prisma")).default;
+        const t = await prisma.template.findFirst({
+          where: { OR: [{ id }, { slug: id }] },
+        });
+        if (t) {
+          const originalUrl =
+            t.defaultBottomText &&
+            (t.defaultBottomText.startsWith("data:image") || t.defaultBottomText.startsWith("http"))
+              ? t.defaultBottomText
+              : t.svgDataUri;
+          return successResponse({ ...t, originalUrl }, "Template retrieved successfully");
+        }
+      } catch (dbErr) {
+        console.warn("DB template query unavailable:", dbErr);
+      }
+
+      return errorResponse("Template not found", 404);
     }
 
     const queryParams = {

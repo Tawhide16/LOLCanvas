@@ -41,10 +41,18 @@ export default function CanvasStage({
     let img = imageCacheRef.current.get(src);
     if (!img) {
       img = new Image();
-      img.crossOrigin = "anonymous";
+      if (!src.startsWith("data:")) {
+        img.crossOrigin = "anonymous";
+      }
       img.src = src;
       img.onload = () => {
         setForceRedraw((c) => c + 1);
+      };
+      img.onerror = () => {
+        if (img && img.crossOrigin) {
+          img.crossOrigin = null as any;
+          img.src = src;
+        }
       };
       imageCacheRef.current.set(src, img);
     }
@@ -238,7 +246,14 @@ export default function CanvasStage({
     };
 
     // Check background image with instant cache
-    const bgSrc = backgroundImageUrl || (template ? template.svgDataUri : null);
+    const bgSrc =
+      backgroundImageUrl ||
+      (template
+        ? template.svgDataUri ||
+          template.originalUrl ||
+          (template as any).previewUrl ||
+          (template as any).imageUrl
+        : null);
 
     if (bgSrc) {
       const bgImage = getImage(bgSrc);

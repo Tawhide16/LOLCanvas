@@ -214,14 +214,14 @@ function UploadForm() {
 
       const data = await resMeme.json().catch(() => ({}));
 
-      // 3. Update client-side local cache so it appears instantly on the home page
+      // 3. Update client-side local cache so it appears instantly on the home page and in the editor
       try {
-        const cachedRaw = localStorage.getItem("lolcanvas_cached_templates");
-        const cachedList = cachedRaw ? JSON.parse(cachedRaw) : [];
+        const userUploadsRaw = localStorage.getItem("lolcanvas_user_uploads");
+        const userUploads = userUploadsRaw ? JSON.parse(userUploadsRaw) : [];
         const newCard = {
           id: slug,
           slug: slug,
-          index: `№ ${(cachedList.length + 1).toString().padStart(4, "0")}`,
+          index: `№ ${(userUploads.length + 1).toString().padStart(4, "0")}`,
           title: normalizedTitle,
           categoryId: catSlug,
           categoryName: catName,
@@ -244,10 +244,24 @@ function UploadForm() {
           createdAt: new Date().toISOString(),
           authorEmail: authorEmail,
         };
+
+        const updatedUploads = [newCard, ...userUploads.filter((item: any) => item.id !== slug && item.slug !== slug)];
+        localStorage.setItem("lolcanvas_user_uploads", JSON.stringify(updatedUploads));
+
+        // Also update lolcanvas_cached_templates for backward compatibility
+        const cachedRaw = localStorage.getItem("lolcanvas_cached_templates");
+        const cachedList = cachedRaw ? JSON.parse(cachedRaw) : [];
         localStorage.setItem(
           "lolcanvas_cached_templates",
-          JSON.stringify([newCard, ...cachedList])
+          JSON.stringify([newCard, ...cachedList.filter((c: any) => c.slug !== slug && c.id !== slug)])
         );
+
+        // Save session storage for instant 0ms editor navigation
+        sessionStorage.setItem(`lolcanvas_template_${slug}`, JSON.stringify(newCard));
+        sessionStorage.setItem(`lolcanvas_template_${newCard.id}`, JSON.stringify(newCard));
+
+        // Notify all open components and listeners
+        window.dispatchEvent(new CustomEvent("lolcanvas_template_uploaded", { detail: newCard }));
       } catch (e) {}
 
       setUploadProgress(100);

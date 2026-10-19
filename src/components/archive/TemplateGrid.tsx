@@ -96,6 +96,32 @@ export default function TemplateGrid({
       }
     });
 
+    // Helper to merge dedicated user uploads so community images are never wiped
+    const mergeUserUploads = (incoming: Template[]) => {
+      try {
+        const userUploadsRaw = localStorage.getItem("lolcanvas_user_uploads");
+        if (userUploadsRaw) {
+          const userUploads: Template[] = JSON.parse(userUploadsRaw);
+          if (Array.isArray(userUploads) && userUploads.length > 0) {
+            const removedIds: string[] = JSON.parse(localStorage.getItem("lolcanvas_removed_templates") || "[]");
+            const cleanUploads = userUploads.filter((u) => !removedIds.includes(u.id) && !removedIds.includes(u.slug));
+            const existingSlugs = new Set(cleanUploads.map((u) => u.slug || u.id));
+            const remaining = incoming.filter((t) => !existingSlugs.has(t.slug) && !existingSlugs.has(t.id));
+            return [...cleanUploads, ...remaining];
+          }
+        }
+      } catch (e) {}
+      return incoming;
+    };
+
+    // Listen for instant upload events
+    const handleUploadedEvent = (e: any) => {
+      if (e.detail) {
+        setTemplates((prev) => [e.detail, ...prev.filter((t) => t.id !== e.detail.id && t.slug !== e.detail.slug)]);
+      }
+    };
+    window.addEventListener("lolcanvas_template_uploaded", handleUploadedEvent);
+
     // 2. Fetch live templates from DB (stale-while-revalidate background sync)
     async function loadTemplates() {
       // Read client cache on mount without causing SSR hydration mismatch
@@ -104,9 +130,11 @@ export default function TemplateGrid({
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setTemplates((prev) => (prev.length === 0 ? parsed : prev));
+            setTemplates((prev) => mergeUserUploads(prev.length === 0 ? parsed : prev));
             setIsLoadingTemplates(false);
           }
+        } else {
+          setTemplates((prev) => mergeUserUploads(prev));
         }
       } catch (e) {}
 
@@ -127,9 +155,10 @@ export default function TemplateGrid({
             const filtered = data.data.templates.filter(
               (t: any) => !removedIds.includes(t.id) && !removedIds.includes(t.slug)
             );
-            setTemplates(filtered);
+            const withUploads = mergeUserUploads(filtered);
+            setTemplates(withUploads);
             try {
-              localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(filtered));
+              localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(withUploads));
             } catch (e) {}
 
             // Auto-optimize heavy legacy images in the background so the site loads in milliseconds
@@ -224,6 +253,14 @@ export default function TemplateGrid({
         if (cardToDelete.slug) removedIds.push(cardToDelete.slug);
         localStorage.setItem("lolcanvas_removed_templates", JSON.stringify(removedIds));
 
+        try {
+          const userUploads = JSON.parse(localStorage.getItem("lolcanvas_user_uploads") || "[]");
+          const nextUserUploads = userUploads.filter(
+            (t: any) => t.id !== targetId && t.slug !== targetId && t.slug !== cardToDelete.slug
+          );
+          localStorage.setItem("lolcanvas_user_uploads", JSON.stringify(nextUserUploads));
+        } catch (e) {}
+
         setTemplates((prev) => {
           const next = prev.filter((t) => t.id !== targetId && t.slug !== targetId && t.slug !== cardToDelete.slug);
           try {
@@ -313,8 +350,18 @@ export default function TemplateGrid({
           authorEmail: creatorEmail,
         };
 
+        try {
+          const userUploads = JSON.parse(localStorage.getItem("lolcanvas_user_uploads") || "[]");
+          const nextUserUploads = [newCard, ...userUploads.filter((u: any) => u.id !== newCard.id && u.slug !== newCard.slug)];
+          localStorage.setItem("lolcanvas_user_uploads", JSON.stringify(nextUserUploads));
+        } catch (e) {}
+
+        window.dispatchEvent(
+          new CustomEvent("lolcanvas_template_uploaded", { detail: newCard })
+        );
+
         setTemplates((prev) => {
-          const next = [newCard, ...prev];
+          const next = [newCard, ...prev.filter((t) => t.id !== newCard.id && t.slug !== newCard.slug)];
           try {
             localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(next));
           } catch (e) {}
@@ -382,6 +429,27 @@ export default function TemplateGrid({
             }
             return t;
           });
+          try {
+            const rawUserUploads = localStorage.getItem("lolcanvas_user_uploads");
+            if (rawUserUploads) {
+              const uList = JSON.parse(rawUserUploads);
+              const updatedUList = uList.map((t: any) => {
+                if (t.id === cardToEdit.id || t.slug === cardToEdit.slug) {
+                  return {
+                    ...t,
+                    title: editTitle.trim().toUpperCase(),
+                    categoryId: editCategory,
+                    categoryName: editCategory.toUpperCase(),
+                    svgDataUri: editImagePreview || t.svgDataUri,
+                    originalUrl: fullOriginal,
+                  };
+                }
+                return t;
+              });
+              localStorage.setItem("lolcanvas_user_uploads", JSON.stringify(updatedUList));
+            }
+          } catch (e) {}
+
           try {
             localStorage.setItem("lolcanvas_cached_templates", JSON.stringify(next));
           } catch (e) {}

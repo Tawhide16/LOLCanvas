@@ -7,6 +7,9 @@ import { hasPermission } from "../auth/auth.rbac";
 
 const CACHE_TTL_SECONDS = 60; // Cache templates for 60 seconds
 
+// In-memory community templates pool for reliable persistence across hot reloads & when DB is unavailable
+export const IN_MEMORY_TEMPLATES: any[] = [];
+
 export async function getTemplates(query: TemplateQueryInput) {
   const cacheKey = `templates:cat_${query.category}:q_${query.search}:p_${query.page}`;
 
@@ -104,8 +107,7 @@ export async function getTemplates(query: TemplateQueryInput) {
       format: "classic",
       formatLabel: "Standard Format",
       svgDataUri: t.svgDataUri,
-      // Omit multi-megabyte originalUrl from catalog list for instantaneous web loading
-      originalUrl: undefined,
+      originalUrl: originalUrl || t.svgDataUri,
       width: t.width,
       height: t.height,
       aspectRatio: `${t.width}:${t.height}`,
@@ -116,10 +118,43 @@ export async function getTemplates(query: TemplateQueryInput) {
       trendingRank: idx + 1,
       remixCount: t.downloads || 1500,
       downloadCount: t.downloads || 800,
-      createdAt: t.createdAt.toISOString(),
+      createdAt: (t.createdAt instanceof Date ? t.createdAt : new Date()).toISOString(),
       authorEmail: authorEmail,
     };
   });
+
+  // Prepend in-memory community uploads (ensuring they appear first and always have images)
+  const existingSlugs = new Set(results.map((r) => r.slug || r.id));
+  for (const mem of IN_MEMORY_TEMPLATES) {
+    if (!existingSlugs.has(mem.slug) && !existingSlugs.has(mem.id)) {
+      results.unshift({
+        id: mem.id,
+        slug: mem.slug,
+        index: `№ ${(results.length + 1).toString().padStart(4, "0")}`,
+        title: mem.title,
+        categoryId: mem.category || "classic",
+        categoryName: (mem.category || "COMMUNITY").toUpperCase(),
+        format: "classic",
+        formatLabel: "Community Upload",
+        svgDataUri: mem.svgDataUri,
+        originalUrl: mem.originalUrl || mem.svgDataUri,
+        width: mem.width || 1080,
+        height: mem.height || 1080,
+        aspectRatio: `${mem.width || 1080}:${mem.height || 1080}`,
+        tags: mem.tags || [],
+        defaultTopText: mem.defaultTopText || "",
+        defaultBottomText: mem.defaultBottomText || "",
+        isWatermarkFree: true,
+        trendingRank: 1,
+        remixCount: 150,
+        downloadCount: 80,
+        createdAt: (mem.createdAt instanceof Date ? mem.createdAt : new Date()).toISOString(),
+        authorEmail: mem.authorEmail,
+      });
+      existingSlugs.add(mem.slug);
+      existingSlugs.add(mem.id);
+    }
+  }
 
   // Merge any public memes not already in the templates list
   const existingTitles = new Set(results.map((r) => r.title.toLowerCase().trim()));
@@ -230,33 +265,58 @@ export async function createTemplate(
 
   // Preserve real original image for downloads
   const originalSource = input.originalUrl || input.defaultBottomText || input.svgDataUri;
+  const imageSource = input.svgDataUri || input.originalUrl || originalSource;
 
-  const template = await prisma.template.upsert({
-    where: { slug },
-    update: {
-      title: input.title,
-      category: input.category,
-      tags: tags,
-      svgDataUri: input.svgDataUri,
-      width: input.width || 1080,
-      height: input.height || 1080,
-      defaultTopText: input.defaultTopText || null,
-      defaultBottomText: originalSource || null,
-    },
-    create: {
-      slug,
-      title: input.title,
-      category: input.category,
-      tags: tags,
-      svgDataUri: input.svgDataUri,
-      width: input.width || 1080,
-      height: input.height || 1080,
-      defaultTopText: input.defaultTopText || null,
-      defaultBottomText: originalSource || null,
-    },
-  });
+  const memTemplate = {
+    id: slug,
+    slug,
+    title: input.title.trim().toUpperCase(),
+    category: input.category,
+    tags,
+    svgDataUri: imageSource,
+    originalUrl: originalSource,
+    width: input.width || 1080,
+    height: input.height || 1080,
+    defaultTopText: input.defaultTopText || "",
+    defaultBottomText: originalSource || "",
+    authorEmail: creatorEmail,
+    createdAt: new Date(),
+  };
 
-  return template;
+  // Add to in-memory community pool first for instant availability
+  IN_MEMORY_TEMPLATES.unshift(memTemplate);
+
+  try {
+    const template = await prisma.template.upsert({
+      where: { slug },
+      update: {
+        title: input.title,
+        category: input.category,
+        tags: tags,
+        svgDataUri: imageSource,
+        width: input.width || 1080,
+        height: input.height || 1080,
+        defaultTopText: input.defaultTopText || null,
+        defaultBottomText: originalSource || null,
+      },
+      create: {
+        slug,
+        title: input.title,
+        category: input.category,
+        tags: tags,
+        svgDataUri: imageSource,
+        width: input.width || 1080,
+        height: input.height || 1080,
+        defaultTopText: input.defaultTopText || null,
+        defaultBottomText: originalSource || null,
+      },
+    });
+
+    return template;
+  } catch (err: any) {
+    console.warn("DB offline during template creation, safely retained in-memory:", err?.message || err);
+    return memTemplate;
+  }
 }
 
 export async function updateTemplate(input: {
