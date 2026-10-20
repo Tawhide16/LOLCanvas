@@ -22,13 +22,15 @@
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "bcryptjs": "^3.0.3",
+    "fabric": "^7.4.0",
     "framer-motion": "^14.1.0",
     "jose": "^6.2.12",
     "lucide-react": "^1.55.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

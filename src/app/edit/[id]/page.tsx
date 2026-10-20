@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense, use } from "react";
-import EditorClient from "@/components/editor/EditorClient";
+import EditorClientWrapper from "@/components/editor/EditorClientWrapper";
 import { TEMPLATES } from "@/lib/data";
 
 export const instant = false;
@@ -19,10 +19,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-
 function EditorContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  return <EditorClient templateSlug={id} />;
+  return <EditorClientWrapper templateSlug={id} />;
 }
 
 export default function EditorPage({ params }: PageProps) {

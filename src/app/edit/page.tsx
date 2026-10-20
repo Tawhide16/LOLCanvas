@@ -1,5 +1,5 @@
-import EditorClient from "@/components/editor/EditorClient";
+import EditorClientWrapper from "@/components/editor/EditorClientWrapper";
 
 export default function EditRootPage() {
-  return <EditorClient templateSlug="blank-canvas" />;
+  return <EditorClientWrapper templateSlug="blank-canvas" />;
 }

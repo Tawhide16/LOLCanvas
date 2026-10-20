@@ -33,12 +33,16 @@ import {
   Crop,
   RotateCw,
   Loader2,
+  Keyboard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import CanvasStage from "./CanvasStage";
+import CanvasWorkspace from "./CanvasWorkspace";
+import ShortcutsModal from "./ShortcutsModal";
 import TextControls from "./TextControls";
 import ImageControls from "./ImageControls";
 import LayerPanel from "./LayerPanel";
+import { fabricAdapter } from "@/lib/editor/fabricAdapter";
+import { useEditorStore } from "@/lib/editor/editorStore";
 import { TEMPLATES } from "@/lib/data";
 import { SOCIAL_PRESETS, VIDEO_PRESETS, CanvasPreset } from "@/lib/editorPresets";
 import { MEME_OVERLAYS, MemeOverlayItem } from "@/lib/memeOverlays";
@@ -92,6 +96,17 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   const [canvasHeight, setCanvasHeight] = useState<number>(initialTemplate?.height || 1080);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [customBgImage, setCustomBgImage] = useState<string | null>(null);
+
+  // Zustand Store Bindings for Canva Engine
+  const canUndo = useEditorStore((s) => s.canUndo);
+  const canRedo = useEditorStore((s) => s.canRedo);
+  const isSnappingEnabled = useEditorStore((s) => s.isSnappingEnabled);
+  const setSnappingEnabled = useEditorStore((s) => s.setSnappingEnabled);
+  const isGridVisible = useEditorStore((s) => s.isGridVisible);
+  const setGridVisible = useEditorStore((s) => s.setGridVisible);
+  const setShowShortcutsModal = useEditorStore((s) => s.setShowShortcutsModal);
+  const storeZoom = useEditorStore((s) => s.zoom);
+  const setStoreZoom = useEditorStore((s) => s.setZoom);
 
   // Custom size form state
   const [customWInput, setCustomWInput] = useState<string>("1080");
@@ -364,26 +379,27 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   };
 
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const prev = history[historyIndex - 1];
-      setLayers(prev);
-      setHistoryIndex(historyIndex - 1);
+    const prev = useEditorStore.getState().undo();
+    if (prev) {
+      fabricAdapter.loadFromHistory(prev);
     }
   };
 
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const next = history[historyIndex + 1];
-      setLayers(next);
-      setHistoryIndex(historyIndex + 1);
+    const next = useEditorStore.getState().redo();
+    if (next) {
+      fabricAdapter.loadFromHistory(next);
     }
   };
 
   const handleResetLayers = () => {
-    const reset = getInitialLayers(currentTemplate);
-    setLayers(reset);
-    setSelectedLayerId(reset[0]?.id || null);
-    pushHistory(reset);
+    if (fabricAdapter.canvas) {
+      fabricAdapter.canvas.clear();
+      fabricAdapter.canvas.backgroundColor = "#FFFFFF";
+      fabricAdapter.canvas.requestRenderAll();
+      fabricAdapter.syncLayersToStore();
+      fabricAdapter.saveHistoryState();
+    }
   };
 
   // Preset Selection Handlers
@@ -557,46 +573,13 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   };
 
   const handleAddTextLayer = (initialText = "NEW CAPTION", yPos = 50) => {
-    const newId = `layer-${Date.now()}`;
-    const maxZ = layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
-    const newLayer: CanvasLayer = {
-      id: newId,
-      type: "text",
-      text: initialText,
-      fontFamily: "Impact",
-      fontSize: 44,
-      color: "#FFFFFF",
-      strokeColor: "#000000",
-      strokeWidth: 6,
-      align: "center",
-      isUppercase: true,
-      x: 50,
-      y: yPos,
-      zIndex: maxZ + 1,
-    };
-    const updated = [...layers, newLayer];
-    setLayers(updated);
-    setSelectedLayerId(newId);
-    pushHistory(updated);
+    fabricAdapter.addTextLayer(initialText);
+    setHasUnsavedChanges(true);
   };
 
   const handleAddSticker = (symbol: string) => {
-    const newId = `sticker-${Date.now()}`;
-    const maxZ = layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
-    const newLayer: CanvasLayer = {
-      id: newId,
-      type: "sticker",
-      stickerSymbol: symbol,
-      color: "#E11D48",
-      x: 75,
-      y: 25,
-      rotation: -10,
-      zIndex: maxZ + 1,
-    };
-    const updated = [...layers, newLayer];
-    setLayers(updated);
-    setSelectedLayerId(newId);
-    pushHistory(updated);
+    fabricAdapter.addTextLayer(symbol, { fontSize: 72 });
+    setHasUnsavedChanges(true);
   };
 
   const handleDeleteLayer = (id: string) => {
@@ -639,44 +622,35 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
   // Export actions
   const handleExportPNG = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const dataUrl = fabricAdapter.exportImage("png", 1.0);
+    if (!dataUrl) return;
 
-    setSelectedLayerId(null);
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `lolcanvas-${activePresetName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
-    setTimeout(() => {
-      const dataUrl = canvas.toDataURL("image/png", 1.0);
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `lolcanvas-${activePresetName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 2500);
-    }, 100);
+    setDownloadSuccess(true);
+    setTimeout(() => setDownloadSuccess(false), 2500);
   };
 
-  const handleCopyToClipboard = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const handleCopyToClipboard = async () => {
+    const dataUrl = fabricAdapter.exportImage("png", 1.0);
+    if (!dataUrl) return;
 
-    setSelectedLayerId(null);
-    setTimeout(() => {
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
-          setCopiedSuccess(true);
-          setTimeout(() => setCopiedSuccess(false), 2500);
-        } catch {
-          handleExportPNG();
-        }
-      }, "image/png");
-    }, 100);
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      setCopiedSuccess(true);
+      setTimeout(() => setCopiedSuccess(false), 2500);
+    } catch {
+      handleExportPNG();
+    }
   };
 
   // Upload & Save to Community Profile
@@ -868,7 +842,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
           <div className="flex items-center border border-black divide-x divide-black bg-white">
             <button
               onClick={handleUndo}
-              disabled={historyIndex <= 0}
+              disabled={!canUndo}
               className="p-1.5 hover:bg-[#F6F5EE] disabled:opacity-20 transition-colors"
               title="Undo (Ctrl+Z)"
             >
@@ -876,18 +850,42 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
             </button>
             <button
               onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
+              disabled={!canRedo}
               className="p-1.5 hover:bg-[#F6F5EE] disabled:opacity-20 transition-colors"
-              title="Redo (Ctrl+Y)"
+              title="Redo (Ctrl+Shift+Z / Ctrl+Y)"
             >
               <Redo2 className="w-3.5 h-3.5 text-black" />
             </button>
             <button
-              onClick={handleResetLayers}
-              className="p-1.5 hover:bg-[#F6F5EE] text-[#E11D48] transition-colors"
-              title="Reset Layers"
+              onClick={() => setShowShortcutsModal(true)}
+              className="p-1.5 hover:bg-[#F6F5EE] text-black transition-colors"
+              title="Keyboard Shortcuts Cheat Sheet (?)"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <Keyboard className="w-3.5 h-3.5 text-[#E11D48]" />
+            </button>
+          </div>
+
+          {/* Snapping & Grid Toggles */}
+          <div className="hidden lg:flex items-center border border-black divide-x divide-black bg-white text-[11px] font-mono-code">
+            <button
+              type="button"
+              onClick={() => setSnappingEnabled(!isSnappingEnabled)}
+              className={`px-2 py-1 font-bold transition-colors ${
+                isSnappingEnabled ? "bg-[#DCFCE7] text-[#15803D]" : "text-[#777777] hover:bg-[#F6F5EE]"
+              }`}
+              title="Smart Guides & Alignment Snapping"
+            >
+              SNAP: {isSnappingEnabled ? "ON" : "OFF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setGridVisible(!isGridVisible)}
+              className={`px-2 py-1 font-bold transition-colors ${
+                isGridVisible ? "bg-black text-white" : "text-[#777777] hover:bg-[#F6F5EE]"
+              }`}
+              title="Toggle Background Grid Pattern"
+            >
+              GRID
             </button>
           </div>
 
@@ -905,7 +903,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
               className="px-2.5 py-1 font-bold hover:bg-[#F6F5EE]"
               title="Reset Zoom"
             >
-              {Math.round(zoomLevel * 100)}%
+              {Math.round(storeZoom * 100)}%
             </button>
             <button
               onClick={handleZoomIn}
@@ -1651,20 +1649,15 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
         {/* C. CENTRAL CANVAS WORKSPACE AREA */}
         <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#E6E4DC]">
-          <CanvasStage
+          <CanvasWorkspace
             template={currentTemplate}
             backgroundImageUrl={customBgImage}
-            width={canvasWidth}
-            height={canvasHeight}
-            zoomLevel={zoomLevel}
-            layers={layers}
-            selectedLayerId={selectedLayerId}
-            onSelectLayer={setSelectedLayerId}
-            onUpdateLayerPosition={handleUpdateLayerPosition}
-            canvasRef={canvasRef}
           />
         </main>
       </div>
+
+      {/* Shortcuts Cheat Sheet Modal */}
+      <ShortcutsModal />
 
       {/* 3. CONFIRMATION MODAL ON EXIT */}
       <AnimatePresence>
