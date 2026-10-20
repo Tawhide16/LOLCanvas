@@ -99,7 +99,7 @@ export default function Navbar() {
       {/* Connected Desktop Navigation Strip */}
       <div className="flex items-stretch divide-x divide-black h-14 md:h-16 select-none">
         {/* Brand */}
-        <div className="flex items-center px-4 md:px-6 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors group shrink-0">
+        <div className="flex items-center px-3.5 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors group shrink-0">
           <Link
             href="/"
             className="flex items-center gap-2.5"
@@ -118,39 +118,6 @@ export default function Navbar() {
               )}
             </span>
           </Link>
-
-          {/* Super Admin Quick Actions Directly on Header */}
-          {isAdmin && (
-            <div className="flex items-center gap-1.5 ml-3">
-              <button
-                type="button"
-                onClick={() => setShowCMSModal(true)}
-                title="SUPER ADMIN: Open Live Visual Content, Image & Typography Editor on this page"
-                className="px-2 py-1 bg-[#E11D48] border border-black text-white hover:bg-black font-mono-code text-[10px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-              >
-                <Sliders className="w-3 h-3 text-white" />
-                <span className="hidden sm:inline">EDIT PAGE CONTENT & SIZES ■</span>
-                <span className="sm:hidden">CMS</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowThemeModal(true)}
-                title="SUPER ADMIN: Edit Website Theme, Logo & Inline Mode"
-                className={`px-2 py-1 border text-[10px] font-mono-code font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ${
-                  isEditMode
-                    ? "bg-[#DCFCE7] border-[#16A34A] text-[#15803D] hover:bg-[#16A34A] hover:text-white"
-                    : "bg-[#FFE4E6] border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white"
-                }`}
-              >
-                <Palette className="w-3 h-3 text-[#E11D48]" />
-                <span className="hidden sm:inline">THEME</span>
-                {isEditMode && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
-                )}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Live Search with Magic Filter */}
@@ -204,7 +171,7 @@ export default function Navbar() {
         {/* Desktop Links with Framer Motion Active Tab indicator and Dynamic Text Size */}
         <div className={`hidden xl:flex items-stretch divide-x divide-black shrink-0 font-mono-code tracking-wider font-medium ${
           content.navbarTextSize === 'xs' ? 'text-[10px]' :
-          content.navbarTextSize === 'base' ? 'text-[14px]' : 'text-[12px]'
+          content.navbarTextSize === 'base' ? 'text-[13px]' : 'text-[11px] 2xl:text-[12px]'
         }`}>
           {navLinks.map((item) => {
             const isActive =
@@ -214,13 +181,13 @@ export default function Navbar() {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`relative flex items-center px-4 transition-colors ${
+                className={`relative flex items-center px-2.5 2xl:px-4 transition-colors ${
                   isActive
                     ? "bg-black text-white font-bold"
                     : "bg-[#FAF9F5] hover:bg-[#F6F5EE] text-black"
                 }`}
               >
-                {item.isEditor && <Palette className="w-3.5 h-3.5 mr-1.5" />}
+                {item.isEditor && <Palette className="w-3.5 h-3.5 mr-1" />}
                 <span>{item.label}</span>
                 {isActive && (
                   <motion.div
@@ -237,48 +204,46 @@ export default function Navbar() {
         {/* Upload Cell */}
         <Link
           href="/upload"
-          className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-black hover:text-white transition-colors shrink-0 font-mono-code text-[12px] font-bold tracking-wider group"
+          className="flex items-center px-3 2xl:px-4 bg-[#FAF9F5] hover:bg-black hover:text-white transition-colors shrink-0 font-mono-code text-[11px] 2xl:text-[12px] font-bold tracking-wider group"
         >
-          <Plus className="w-4 h-4 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
+          <Plus className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
           <span className="hidden sm:inline">{content.navUploadButtonText || "UPLOAD"}</span>
         </Link>
 
-        {/* Super Admin Portal Cell (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
+        {/* Super Admin Portal Cells (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
         {mounted && isAdmin && (
-          <>
+          <div className="flex items-stretch divide-x divide-black shrink-0">
             <button
               type="button"
               onClick={() => setShowCMSModal(true)}
-              className="flex items-center px-3.5 bg-[#E11D48] text-white hover:bg-black transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider border-l border-black cursor-pointer"
+              className="flex items-center px-2.5 2xl:px-3 bg-[#E11D48] text-white hover:bg-black transition-colors font-mono-code text-[10px] 2xl:text-[11px] font-bold tracking-wider cursor-pointer"
               title="Edit all content, text sizes and images live on this website"
             >
-              <Sliders className="w-3.5 h-3.5 mr-1" />
-              <span className="hidden sm:inline">LIVE CMS & SIZES</span>
-              <span className="sm:hidden">CMS</span>
+              <Sliders className="w-3 h-3 mr-1" />
+              <span>LIVE CMS</span>
             </button>
             <Link
               href="/admin"
-              className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
+              className="flex items-center px-2.5 2xl:px-3 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors font-mono-code text-[10px] 2xl:text-[11px] font-bold tracking-wider group"
               title="Super Admin Control Center"
             >
-              <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-              <span className="hidden sm:inline">{content.navAdminButtonText || "SUPER ADMIN"}</span>
-              <span className="sm:hidden">ADMIN</span>
+              <Crown className="w-3 h-3 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
+              <span>{content.navAdminButtonText || "ADMIN"}</span>
             </Link>
-          </>
+          </div>
         )}
 
         {/* User Status Cell (Links to /profile when logged in, or /login when logged out) */}
         <Link
           href={mounted && userEmail ? "/profile" : "/login"}
           suppressHydrationWarning
-          className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[12px] tracking-wider text-black group"
+          className="flex items-center px-3 2xl:px-4 bg-[#FAF9F5] hover:bg-[#F6F5EE] transition-colors shrink-0 font-mono-code text-[11px] 2xl:text-[12px] tracking-wider text-black group"
           title={mounted && userEmail ? "View Creator Profile" : "Sign In"}
         >
           {mounted && userEmail ? (
             <span suppressHydrationWarning className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0 animate-pulse"></span>
-              <span className="font-bold uppercase truncate max-w-[120px]">
+              <span className="font-bold uppercase truncate max-w-[85px] md:max-w-[110px]">
                 {userEmail.split("@")[0]}
               </span>
             </span>
