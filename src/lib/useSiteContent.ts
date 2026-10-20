@@ -41,11 +41,9 @@ export function useSiteContent() {
     return () => window.removeEventListener("lolcanvas_content_changed", handleUpdate);
   }, []);
 
-  const safeContent = { ...DEFAULT_SITE_CONFIG, ...(content || {}) };
-
   return {
-    content: safeContent,
-    siteConfig: safeContent,
-    ...safeContent,
+    content,
+    siteConfig: content,
+    ...content,
   };
 }

@@ -42,7 +42,7 @@ export default function WebsiteContentManager({ adminEmail, onSuccess }: Website
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
 
-  // Sync when initial content is loaded
+  // Sync when content is loaded or updated with a new timestamp
   useEffect(() => {
     if (content) {
       setFormData((prev) => ({
@@ -51,7 +51,7 @@ export default function WebsiteContentManager({ adminEmail, onSuccess }: Website
         ...content,
       }));
     }
-  }, [content]);
+  }, [content?.updatedAt]);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({
