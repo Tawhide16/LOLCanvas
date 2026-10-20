@@ -46,8 +46,9 @@ const COLOR_PRESETS = [
 
 const STAMPS = ["VERIFIED", "CERTIFIED", "CONFIDENTIAL", "VIRAL", "BASED", "TOP TIER", "100% REAL", "APPROVED"];
 
-const FONT_CATEGORIES: FontCategory[] = [
+const FONT_CATEGORIES = [
   "All",
+  "English",
   "Bangla",
   "Meme Bold",
   "Clean Sans",
@@ -55,7 +56,9 @@ const FONT_CATEGORIES: FontCategory[] = [
   "Monospace & Retro",
   "Handwriting & Marker",
   "Vintage & Serif",
-];
+] as const;
+
+type ActiveFontCategory = (typeof FONT_CATEGORIES)[number];
 
 export default function TextControls({
   selectedLayer,
@@ -65,7 +68,7 @@ export default function TextControls({
 }: TextControlsProps) {
   const [activeTab, setActiveTab] = useState<"text" | "stamps">("text");
   const [fontSearch, setFontSearch] = useState("");
-  const [selectedFontCategory, setSelectedFontCategory] = useState<FontCategory>("All");
+  const [selectedFontCategory, setSelectedFontCategory] = useState<ActiveFontCategory>("All");
   const [showAllFonts, setShowAllFonts] = useState(false);
 
   // Active object props from Zustand store
@@ -87,8 +90,14 @@ export default function TextControls({
   // Filter fonts
   const filteredFonts = GOOGLE_FONTS_CATALOG.filter((f) => {
     const matchesSearch = f.name.toLowerCase().includes(fontSearch.toLowerCase());
-    const matchesCategory =
-      selectedFontCategory === "All" || f.category === selectedFontCategory;
+    let matchesCategory = true;
+    if (selectedFontCategory === "English") {
+      matchesCategory = !f.isBangla;
+    } else if (selectedFontCategory === "Bangla") {
+      matchesCategory = !!f.isBangla;
+    } else if (selectedFontCategory !== "All") {
+      matchesCategory = f.category === (selectedFontCategory as any);
+    }
     return matchesSearch && matchesCategory;
   });
 
@@ -104,11 +113,60 @@ export default function TextControls({
     handleUpdate({ fontFamily: fontName });
   };
 
-  const handleAddText = () => {
-    if (onAddTextLayer) {
-      onAddTextLayer("NEW CAPTION");
+  const handleAddEnglishText = (preset: "default" | "top" | "bottom" | "heading" | "subtitle" = "default") => {
+    const canvasWidth = fabricAdapter.canvas?.width || 1080;
+    const canvasHeight = fabricAdapter.canvas?.height || 1080;
+
+    if (preset === "top") {
+      loadGoogleFont("Impact");
+      fabricAdapter.addTextLayer("TOP MEME TEXT", {
+        top: Math.round(canvasHeight * 0.12),
+        fontFamily: "Impact",
+        fontSize: Math.round(canvasWidth * 0.07),
+        fill: "#FFFFFF",
+        stroke: "#000000",
+        strokeWidth: 4,
+      });
+    } else if (preset === "bottom") {
+      loadGoogleFont("Impact");
+      fabricAdapter.addTextLayer("BOTTOM MEME TEXT", {
+        top: Math.round(canvasHeight * 0.88),
+        fontFamily: "Impact",
+        fontSize: Math.round(canvasWidth * 0.07),
+        fill: "#FFFFFF",
+        stroke: "#000000",
+        strokeWidth: 4,
+      });
+    } else if (preset === "heading") {
+      loadGoogleFont("Anton");
+      fabricAdapter.addTextLayer("BOLD HEADLINE", {
+        fontFamily: "Anton",
+        fontSize: Math.round(canvasWidth * 0.065),
+        fill: "#FFFFFF",
+        stroke: "#000000",
+        strokeWidth: 3,
+      });
+    } else if (preset === "subtitle") {
+      loadGoogleFont("Poppins");
+      fabricAdapter.addTextLayer("Subtitle / Secondary Caption", {
+        fontFamily: "Poppins",
+        fontSize: Math.round(canvasWidth * 0.04),
+        fill: "#FFFFFF",
+        stroke: "#000000",
+        strokeWidth: 2,
+      });
     } else {
-      fabricAdapter.addTextLayer("NEW CAPTION");
+      loadGoogleFont("Impact");
+      if (onAddTextLayer) {
+        onAddTextLayer("ENTER ENGLISH TEXT");
+      } else {
+        fabricAdapter.addTextLayer("ENTER ENGLISH TEXT", {
+          fontFamily: "Impact",
+          fill: "#FFFFFF",
+          stroke: "#000000",
+          strokeWidth: 4,
+        });
+      }
     }
   };
 
@@ -166,24 +224,64 @@ export default function TextControls({
         {activeTab === "text" ? (
           <>
             {/* Quick Add Buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleAddText}
-                className="py-2 px-3 bg-black text-white hover:bg-[#333333] transition-colors font-bold uppercase text-[11px] flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ ADD CAPTION</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddBanglaText("Hind Siliguri")}
-                className="py-2 px-3 bg-[#E11D48] text-white hover:bg-black transition-colors font-bold uppercase text-[11px] flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-                title="Add Bangla Caption (Hind Siliguri)"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>+ বাংলা ক্যাপশন</span>
-              </button>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAddEnglishText("default")}
+                  className="py-2.5 px-3 bg-black text-white hover:bg-[#222222] transition-colors font-bold uppercase text-[11px] flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] border border-black"
+                  title="Add English Meme Text (Impact / Anton)"
+                >
+                  <Type className="w-3.5 h-3.5 text-[#FACC15]" />
+                  <span>+ ENGLISH TEXT</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddBanglaText("Hind Siliguri")}
+                  className="py-2.5 px-3 bg-[#E11D48] text-white hover:bg-black transition-colors font-bold uppercase text-[11px] flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] border border-black"
+                  title="Add Bangla Caption (Hind Siliguri)"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>+ বাংলা ক্যাপশন</span>
+                </button>
+              </div>
+
+              {/* Quick English Meme Presets */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[10px]">
+                <span className="text-[9px] font-bold text-[#888888] uppercase whitespace-nowrap">PRESETS:</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddEnglishText("top")}
+                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+                  title="Add Top Meme Text"
+                >
+                  TOP TEXT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddEnglishText("bottom")}
+                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+                  title="Add Bottom Meme Text"
+                >
+                  BOTTOM TEXT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddEnglishText("heading")}
+                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+                  title="Add Bold Heading"
+                >
+                  HEADLINE
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddEnglishText("subtitle")}
+                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+                  title="Add Subtitle"
+                >
+                  SUBTITLE
+                </button>
+              </div>
             </div>
 
             {/* In-canvas editing hint */}
@@ -470,10 +568,12 @@ export default function TextControls({
                         ? "bg-black text-white"
                         : cat === "Bangla"
                         ? "bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white"
+                        : cat === "English"
+                        ? "bg-[#FEF9C3] text-black hover:bg-[#FACC15]"
                         : "bg-white text-black hover:bg-[#F6F5EE]"
                     }`}
                   >
-                    {cat === "Bangla" ? "🇧🇩 BANGLA" : cat}
+                    {cat === "Bangla" ? "🇧🇩 BANGLA" : cat === "English" ? "🔤 ENGLISH" : cat}
                   </button>
                 ))}
               </div>

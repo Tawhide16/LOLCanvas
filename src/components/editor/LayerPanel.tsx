@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useEditorStore } from "@/lib/editor/editorStore";
 import { fabricAdapter } from "@/lib/editor/fabricAdapter";
+import { loadGoogleFont } from "@/lib/googleFonts";
 
 interface LayerPanelProps {
   layers?: any[];
@@ -113,15 +114,31 @@ export default function LayerPanel({
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={handleAddText}
-            className="flex items-center gap-1 px-2 py-1 bg-black text-white hover:bg-[#333333] transition-colors text-[10px] font-bold uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-            title="Add Text Layer"
+            onClick={() => {
+              loadGoogleFont("Impact");
+              fabricAdapter.addTextLayer("ENTER ENGLISH TEXT", { fontFamily: "Impact" });
+            }}
+            className="flex items-center gap-1 px-1.5 py-1 bg-black text-white hover:bg-[#333333] transition-colors text-[9px] font-bold uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+            title="Add English Text Layer"
           >
-            <Plus className="w-3 h-3" />
-            <span>TEXT</span>
+            <Plus className="w-2.5 h-2.5 text-[#FACC15]" />
+            <span>+ ENG</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              loadGoogleFont("Hind Siliguri");
+              fabricAdapter.addTextLayer("আপনার বাংলা ক্যাপশন", { fontFamily: "Hind Siliguri" });
+            }}
+            className="flex items-center gap-1 px-1.5 py-1 bg-[#E11D48] text-white hover:bg-black transition-colors text-[9px] font-bold uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+            title="Add Bangla Text Layer"
+          >
+            <Plus className="w-2.5 h-2.5" />
+            <span>+ বাংলা</span>
           </button>
 
           <input
@@ -134,11 +151,11 @@ export default function LayerPanel({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1 px-2 py-1 bg-white border border-black text-black hover:bg-[#F6F5EE] transition-colors text-[10px] font-bold uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+            className="flex items-center gap-1 px-1.5 py-1 bg-white border border-black text-black hover:bg-[#F6F5EE] transition-colors text-[9px] font-bold uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
             title="Add Image Overlay"
           >
-            <ImageIcon className="w-3 h-3 text-[#E11D48]" />
-            <span>+IMG</span>
+            <ImageIcon className="w-2.5 h-2.5 text-[#E11D48]" />
+            <span>+ IMG</span>
           </button>
         </div>
       </div>
