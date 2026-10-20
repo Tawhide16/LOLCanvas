@@ -1,6 +1,7 @@
 import * as fabric from "fabric";
 import { SnappingManager } from "./snappingGuides";
 import { useEditorStore } from "./editorStore";
+import { loadGoogleFont, ensureFontsReady } from "@/lib/googleFonts";
 
 // Neo-brutalist styling for transformer controls
 export function applyNeoBrutalistControls(obj: fabric.FabricObject) {
@@ -171,7 +172,7 @@ export class FabricAdapter {
       }
       let type: "text" | "image" | "sticker" | "group" = "text";
       if (obj instanceof fabric.FabricImage) {
-        type = obj.isSticker ? "sticker" : "image";
+        type = (obj as any).isSticker ? "sticker" : "image";
       } else if (obj instanceof fabric.Group) {
         type = "group";
       }
@@ -205,7 +206,7 @@ export class FabricAdapter {
 
   public saveHistoryState() {
     if (!this.canvas || this.isInternalUpdate) return;
-    const canvasJson = JSON.stringify(this.canvas.toJSON(["id", "name", "isSticker", "stickerSymbol", "imageName", "previewUrl", "lockMovementX", "lockMovementY", "lockRotation", "lockScalingX", "lockScalingY"]));
+    const canvasJson = JSON.stringify((this.canvas as any).toJSON(["id", "name", "isSticker", "stickerSymbol", "imageName", "previewUrl", "lockMovementX", "lockMovementY", "lockRotation", "lockScalingX", "lockScalingY"]));
     const { width, height, backgroundColor, layers } = useEditorStore.getState();
 
     useEditorStore.getState().pushHistory({
@@ -319,6 +320,36 @@ export class FabricAdapter {
     if (!this.canvas) return;
     const active = this.canvas.getActiveObject();
     if (!active) return;
+
+    // Handle font family loading
+    if (properties.fontFamily) {
+      loadGoogleFont(properties.fontFamily, () => {
+        if (!this.canvas) return;
+        active.set({ fontFamily: properties.fontFamily });
+        active.setCoords();
+        this.canvas.requestRenderAll();
+        this.saveHistoryState();
+      });
+    }
+
+    // Handle Shadow
+    if (properties.shadowColor !== undefined) {
+      if (properties.shadowColor === "" || properties.shadowColor === "transparent") {
+        active.set({ shadow: null });
+      } else {
+        const shadow = new fabric.Shadow({
+          color: properties.shadowColor,
+          blur: properties.shadowBlur !== undefined ? properties.shadowBlur : 8,
+          offsetX: properties.shadowOffsetX !== undefined ? properties.shadowOffsetX : 3,
+          offsetY: properties.shadowOffsetY !== undefined ? properties.shadowOffsetY : 3,
+        });
+        active.set({ shadow });
+      }
+      delete properties.shadowColor;
+      delete properties.shadowBlur;
+      delete properties.shadowOffsetX;
+      delete properties.shadowOffsetY;
+    }
 
     active.set(properties as any);
     active.setCoords();
@@ -562,8 +593,16 @@ export class FabricAdapter {
 
   // --- Export Actions ---
 
-  public exportImage(format: "png" | "jpeg" | "webp" = "png", multiplier = 1, quality = 0.95): string {
+  public async exportImage(format: "png" | "jpeg" | "webp" = "png", multiplier = 1, quality = 0.95): Promise<string> {
     if (!this.canvas) return "";
+
+    // 1. Collect all font families used on canvas objects and ensure loaded
+    const textObjects = this.canvas.getObjects().filter((o) => o instanceof fabric.Textbox || o instanceof fabric.FabricText);
+    const fontsToLoad = Array.from(new Set(textObjects.map((t: any) => t.fontFamily).filter(Boolean)));
+    if (fontsToLoad.length > 0) {
+      await ensureFontsReady(fontsToLoad as string[]);
+    }
+
     this.canvas.discardActiveObject();
     this.snappingManager?.clearGuides();
     this.canvas.requestRenderAll();

@@ -34,15 +34,26 @@ import {
   RotateCw,
   Loader2,
   Keyboard,
+  FolderOpen,
+  Save,
+  FileDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CanvasWorkspace from "./CanvasWorkspace";
 import ShortcutsModal from "./ShortcutsModal";
+import ExportModal from "./ExportModal";
 import TextControls from "./TextControls";
 import ImageControls from "./ImageControls";
 import LayerPanel from "./LayerPanel";
 import { fabricAdapter } from "@/lib/editor/fabricAdapter";
 import { useEditorStore } from "@/lib/editor/editorStore";
+import {
+  autosaveProject,
+  getAutosavedProject,
+  clearAutosavedProject,
+  exportProjectJsonFile,
+  importProjectJsonFile,
+} from "@/lib/editor/projectStorage";
 import { TEMPLATES } from "@/lib/data";
 import { SOCIAL_PRESETS, VIDEO_PRESETS, CanvasPreset } from "@/lib/editorPresets";
 import { MEME_OVERLAYS, MemeOverlayItem } from "@/lib/memeOverlays";
@@ -105,8 +116,57 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   const isGridVisible = useEditorStore((s) => s.isGridVisible);
   const setGridVisible = useEditorStore((s) => s.setGridVisible);
   const setShowShortcutsModal = useEditorStore((s) => s.setShowShortcutsModal);
+  const setShowExportModal = useEditorStore((s) => s.setShowExportModal);
   const storeZoom = useEditorStore((s) => s.zoom);
   const setStoreZoom = useEditorStore((s) => s.setZoom);
+
+  // Autosave & Project Storage state
+  const projectFileInputRef = useRef<HTMLInputElement>(null);
+  const [autosavePrompt, setAutosavePrompt] = useState<{ date: string } | null>(null);
+
+  // Check autosave on mount
+  useEffect(() => {
+    getAutosavedProject().then((project) => {
+      if (project && project.canvasJson) {
+        setAutosavePrompt({ date: new Date(project.savedAt).toLocaleTimeString() });
+      }
+    });
+  }, []);
+
+  // Periodic autosave to IndexedDB
+  useEffect(() => {
+    const interval = setInterval(() => {
+      autosaveProject();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clipboard paste listener (Ctrl+V screenshots directly to canvas)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUri = event.target?.result as string;
+              if (dataUri) {
+                fabricAdapter.addImageLayer(dataUri, "Pasted Screenshot", true);
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   // Custom size form state
   const [customWInput, setCustomWInput] = useState<string>("1080");
@@ -621,8 +681,8 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   const handleZoomReset = () => setZoomLevel(1);
 
   // Export actions
-  const handleExportPNG = () => {
-    const dataUrl = fabricAdapter.exportImage("png", 1.0);
+  const handleExportPNG = async () => {
+    const dataUrl = await fabricAdapter.exportImage("png", 1.0);
     if (!dataUrl) return;
 
     const a = document.createElement("a");
@@ -637,7 +697,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   };
 
   const handleCopyToClipboard = async () => {
-    const dataUrl = fabricAdapter.exportImage("png", 1.0);
+    const dataUrl = await fabricAdapter.exportImage("png", 1.0);
     if (!dataUrl) return;
 
     try {
@@ -655,9 +715,6 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
   // Upload & Save to Community Profile
   const handleUploadToCommunity = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
     setSelectedLayerId(null);
     setIsPublishing(true);
     setPublishProgress(20);
@@ -676,7 +733,8 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
     setTimeout(async () => {
       try {
-        const dataUrl = canvas.toDataURL("image/png", 0.95);
+        const dataUrl = await fabricAdapter.exportImage("png", 0.95);
+        if (!dataUrl) throw new Error("Could not export canvas image");
 
         let authorEmail = "creator@lolcanvas.studio";
         try {
@@ -916,10 +974,48 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
         </div>
 
         {/* Right: Export & Exit Editor */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* Hidden Project JSON Input */}
+          <input
+            ref={projectFileInputRef}
+            type="file"
+            accept=".json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                await importProjectJsonFile(file);
+              }
+            }}
+            className="hidden"
+          />
+
+          {/* Open Project */}
+          <button
+            type="button"
+            onClick={() => projectFileInputRef.current?.click()}
+            className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-black hover:bg-[#F6F5EE] font-bold uppercase transition-all text-xs"
+            title="Open saved LOLCanvas project (.json)"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-black" />
+            <span>OPEN</span>
+          </button>
+
+          {/* Save Project */}
+          <button
+            type="button"
+            onClick={exportProjectJsonFile}
+            className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-black hover:bg-[#F6F5EE] font-bold uppercase transition-all text-xs"
+            title="Save project file (.json) to continue editing later"
+          >
+            <Save className="w-3.5 h-3.5 text-black" />
+            <span>PROJECT</span>
+          </button>
+
+          {/* Quick Copy to Clipboard */}
           <button
             onClick={handleCopyToClipboard}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-black hover:bg-[#F6F5EE] font-bold uppercase transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-black hover:bg-[#F6F5EE] font-bold uppercase transition-all text-xs"
+            title="Copy watermark-free PNG to clipboard"
           >
             {copiedSuccess ? (
               <>
@@ -934,23 +1030,14 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
             )}
           </button>
 
-          {/* 1. DOWNLOAD PNG (Watermark-free) */}
+          {/* 1. EXPORT OPTIONS (Modal with PNG / JPG / WEBP / 1x/2x/3x scale) */}
           <button
-            onClick={handleExportPNG}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-white border border-black text-black hover:bg-[#F6F5EE] font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs"
-            title="Download watermark-free PNG"
+            onClick={() => setShowExportModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-[#E11D48] text-white hover:bg-black font-bold uppercase tracking-wider transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-xs"
+            title="Export high-res PNG, JPG, or WEBP with quality & scale controls"
           >
-            {downloadSuccess ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                <span className="text-[#10B981]">DOWNLOADED!</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5 text-black" />
-                <span>DOWNLOAD PNG</span>
-              </>
-            )}
+            <Download className="w-3.5 h-3.5" />
+            <span>EXPORT OPTIONS ■</span>
           </button>
 
           {/* 2. UPLOAD & SAVE TO COMMUNITY / PROFILE */}
@@ -1648,7 +1735,65 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
         </aside>
 
         {/* C. CENTRAL CANVAS WORKSPACE AREA */}
-        <main className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#E6E4DC]">
+        <main
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files && files[0] && files[0].type.startsWith("image/")) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUri = event.target?.result as string;
+                if (dataUri) {
+                  fabricAdapter.addImageLayer(dataUri, files[0].name, true);
+                }
+              };
+              reader.readAsDataURL(files[0]);
+            }
+          }}
+          className="flex-1 h-full flex flex-col relative overflow-hidden bg-[#E6E4DC]"
+        >
+          {/* Autosave Restore Banner */}
+          {autosavePrompt && (
+            <div className="bg-[#FEF3C7] border-b-2 border-black p-2.5 px-4 font-mono-code text-xs flex items-center justify-between text-black select-none z-30 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="font-bold uppercase text-[#D97706]">RESTORE PREVIOUS SESSION?</span>
+                <span className="text-[11px] text-[#666666]">Saved at {autosavePrompt.date}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const proj = await getAutosavedProject();
+                    if (proj) {
+                      await fabricAdapter.loadFromHistory({
+                        canvasJson: proj.canvasJson,
+                        width: proj.width,
+                        height: proj.height,
+                        backgroundColor: proj.backgroundColor,
+                        layersMeta: [],
+                      });
+                    }
+                    setAutosavePrompt(null);
+                  }}
+                  className="px-3 py-1 bg-black text-white hover:bg-[#D97706] font-bold uppercase text-[10px] shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  RESTORE
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await clearAutosavedProject();
+                    setAutosavePrompt(null);
+                  }}
+                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] text-[10px] uppercase font-bold"
+                >
+                  DISCARD
+                </button>
+              </div>
+            </div>
+          )}
+
           <CanvasWorkspace
             template={currentTemplate}
             backgroundImageUrl={customBgImage}
@@ -1658,6 +1803,9 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
       {/* Shortcuts Cheat Sheet Modal */}
       <ShortcutsModal />
+
+      {/* Export Options Modal (PNG / JPG / WEBP, 1x/2x/3x scale, quality) */}
+      <ExportModal />
 
       {/* 3. CONFIRMATION MODAL ON EXIT */}
       <AnimatePresence>
