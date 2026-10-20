@@ -29,12 +29,9 @@ import {
   FolderTree,
   Gauge,
   Layers,
-  Sliders,
-  Type,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import WebsiteContentManager from "@/components/admin/WebsiteContentManager";
 
 interface SystemStats {
   users: {
@@ -160,7 +157,7 @@ interface TemplateItem {
 
 export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "memes" | "audit" | "templates" | "storage" | "content">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "memes" | "audit" | "templates" | "storage">("overview");
 
   // Data states
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -697,18 +694,7 @@ export default function AdminPage() {
             </span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("content")}
-            className={`px-4 py-2 uppercase font-bold border border-black transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1.5 ${
-              activeTab === "content" ? "bg-[#E11D48] text-white" : "bg-white text-black hover:bg-[#E6E4DC]"
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5 text-white" />
-            <span>[07 // WEBSITE CMS & TYPOGRAPHY]</span>
-            <span className="bg-black text-white px-1.5 py-0.5 text-[10px] font-mono-code font-bold">
-              CMS
-            </span>
-          </button>
+
         </div>
       </div>
 
@@ -730,13 +716,14 @@ export default function AdminPage() {
                   ADMINISTRATION TOOLS
                 </h3>
                 <div className="space-y-2 font-mono-code text-xs">
-                  <button
-                    onClick={() => setActiveTab("content")}
+                  <Link
+                    href="/"
                     className="w-full py-2.5 px-3 bg-[#E11D48] text-white hover:bg-black font-bold uppercase text-left flex items-center justify-between transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    title="Edit content and typography live directly on the main website"
                   >
-                    <span>✎ MANAGE ALL WEBSITE CONTENT & IMAGES</span>
-                    <Sliders className="w-4 h-4" />
-                  </button>
+                    <span>✦ LIVE EDIT WEBSITE ON MAIN PAGE</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Link>
 
                   <button
                     onClick={() => {
@@ -1817,15 +1804,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ============================================================== */}
-        {/* TAB 7: WEBSITE CONTENT, IMAGES & TYPOGRAPHY MANAGER            */}
-        {/* ============================================================== */}
-        {activeTab === "content" && (
-          <WebsiteContentManager
-            adminEmail={currentUser?.email || undefined}
-            onSuccess={loadDashboardData}
-          />
-        )}
+
       </div>
 
       {/* Single Card Delete Confirmation Modal (Admin) */}

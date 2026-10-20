@@ -245,15 +245,27 @@ export default function Navbar() {
 
         {/* Super Admin Portal Cell (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
         {mounted && isAdmin && (
-          <Link
-            href="/admin"
-            className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
-            title="Super Admin Control Center"
-          >
-            <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-            <span className="hidden sm:inline">{content.navAdminButtonText || "SUPER ADMIN"}</span>
-            <span className="sm:hidden">ADMIN</span>
-          </Link>
+          <>
+            <button
+              type="button"
+              onClick={() => setShowCMSModal(true)}
+              className="flex items-center px-3.5 bg-[#E11D48] text-white hover:bg-black transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider border-l border-black cursor-pointer"
+              title="Edit all content, text sizes and images live on this website"
+            >
+              <Sliders className="w-3.5 h-3.5 mr-1" />
+              <span className="hidden sm:inline">LIVE CMS & SIZES</span>
+              <span className="sm:hidden">CMS</span>
+            </button>
+            <Link
+              href="/admin"
+              className="flex items-center px-3.5 md:px-4 bg-[#FFE4E6] text-[#E11D48] hover:bg-[#E11D48] hover:text-white transition-colors shrink-0 font-mono-code text-[11px] md:text-[12px] font-bold tracking-wider group border-l border-black"
+              title="Super Admin Control Center"
+            >
+              <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
+              <span className="hidden sm:inline">{content.navAdminButtonText || "SUPER ADMIN"}</span>
+              <span className="sm:hidden">ADMIN</span>
+            </Link>
+          </>
         )}
 
         {/* User Status Cell (Links to /profile when logged in, or /login when logged out) */}
@@ -308,17 +320,33 @@ export default function Navbar() {
             </Link>
           ))}
           {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-5 py-3 bg-[#FFE4E6] text-[#E11D48] font-bold"
-            >
-              <span className="flex items-center gap-2">
-                <Crown className="w-4 h-4" />
-                <span>SUPER ADMIN PORTAL</span>
-              </span>
-              <span className="text-[11px]">→</span>
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setShowCMSModal(true);
+                }}
+                className="w-full flex items-center justify-between px-5 py-3 bg-[#E11D48] text-white font-bold text-left cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4" />
+                  <span>EDIT LIVE CMS & SIZES</span>
+                </span>
+                <span className="text-[11px]">■</span>
+              </button>
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-5 py-3 bg-[#FFE4E6] text-[#E11D48] font-bold"
+              >
+                <span className="flex items-center gap-2">
+                  <Crown className="w-4 h-4" />
+                  <span>SUPER ADMIN PORTAL</span>
+                </span>
+                <span className="text-[11px]">→</span>
+              </Link>
+            </>
           )}
         </motion.div>
       )}
