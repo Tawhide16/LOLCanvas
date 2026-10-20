@@ -246,41 +246,50 @@ export default function TextControls({
                 </button>
               </div>
 
-              {/* Quick English Meme Presets */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[10px]">
-                <span className="text-[9px] font-bold text-[#888888] uppercase whitespace-nowrap">PRESETS:</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddEnglishText("top")}
-                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-                  title="Add Top Meme Text"
-                >
-                  TOP TEXT
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddEnglishText("bottom")}
-                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-                  title="Add Bottom Meme Text"
-                >
-                  BOTTOM TEXT
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddEnglishText("heading")}
-                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-                  title="Add Bold Heading"
-                >
-                  HEADLINE
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddEnglishText("subtitle")}
-                  className="px-2 py-1 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase whitespace-nowrap shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
-                  title="Add Subtitle"
-                >
-                  SUBTITLE
-                </button>
+              {/* Quick English Meme Presets - 2x2 Grid */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-[9px] font-bold text-[#777777] uppercase">
+                  <span>QUICK PRESETS</span>
+                  <span className="text-[#999999]">ONE-CLICK LAYOUT</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleAddEnglishText("top")}
+                    className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase text-center shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] flex items-center justify-center gap-1"
+                    title="Add Top Meme Text (Impact)"
+                  >
+                    <span>⬆</span>
+                    <span>TOP TEXT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddEnglishText("bottom")}
+                    className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase text-center shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] flex items-center justify-center gap-1"
+                    title="Add Bottom Meme Text (Impact)"
+                  >
+                    <span>⬇</span>
+                    <span>BOTTOM TEXT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddEnglishText("heading")}
+                    className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase text-center shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] flex items-center justify-center gap-1"
+                    title="Add Bold Headline (Anton)"
+                  >
+                    <span>★</span>
+                    <span>HEADLINE</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddEnglishText("subtitle")}
+                    className="py-1.5 px-2 bg-white border border-black hover:bg-[#FAF9F5] font-bold text-black uppercase text-center shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] flex items-center justify-center gap-1"
+                    title="Add Subtitle (Poppins)"
+                  >
+                    <span>✎</span>
+                    <span>SUBTITLE</span>
+                  </button>
+                </div>
               </div>
             </div>
 
