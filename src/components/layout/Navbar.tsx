@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Menu, X, Plus, User, Palette, Crown, Sparkles } from "lucide-react";
+import { Search, Menu, X, Plus, User, Palette, Crown, Sparkles, Sliders } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import SuperAdminThemeModal from "@/components/common/SuperAdminThemeModal";
+import SuperAdminLiveCMSModal from "@/components/common/SuperAdminLiveCMSModal";
 import SuperAdminFloatingBar from "@/components/common/SuperAdminFloatingBar";
 import MagicSearchDropdown from "./MagicSearchDropdown";
 import { useAdminEditMode } from "@/lib/useAdminEditMode";
@@ -27,6 +28,7 @@ export default function Navbar() {
   const logoConfig = useSiteLogo();
   const { content } = useSiteContent();
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showCMSModal, setShowCMSModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -117,24 +119,37 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Super Admin Quick EDIT THEME Button */}
+          {/* Super Admin Quick Actions Directly on Header */}
           {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setShowThemeModal(true)}
-              title="SUPER ADMIN: Edit Website Theme, Logo & Inline Mode"
-              className={`ml-3 px-2 py-1 border text-[10px] font-mono-code font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ${
-                isEditMode
-                  ? "bg-[#DCFCE7] border-[#16A34A] text-[#15803D] hover:bg-[#16A34A] hover:text-white"
-                  : "bg-[#FFE4E6] border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white"
-              }`}
-            >
-              <Palette className="w-3 h-3 text-[#E11D48]" />
-              <span>EDIT THEME</span>
-              {isEditMode && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
-              )}
-            </button>
+            <div className="flex items-center gap-1.5 ml-3">
+              <button
+                type="button"
+                onClick={() => setShowCMSModal(true)}
+                title="SUPER ADMIN: Open Live Visual Content, Image & Typography Editor on this page"
+                className="px-2 py-1 bg-[#E11D48] border border-black text-white hover:bg-black font-mono-code text-[10px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+              >
+                <Sliders className="w-3 h-3 text-white" />
+                <span className="hidden sm:inline">EDIT PAGE CONTENT & SIZES ■</span>
+                <span className="sm:hidden">CMS</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowThemeModal(true)}
+                title="SUPER ADMIN: Edit Website Theme, Logo & Inline Mode"
+                className={`px-2 py-1 border text-[10px] font-mono-code font-bold uppercase flex items-center gap-1.5 transition-all shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] ${
+                  isEditMode
+                    ? "bg-[#DCFCE7] border-[#16A34A] text-[#15803D] hover:bg-[#16A34A] hover:text-white"
+                    : "bg-[#FFE4E6] border-[#E11D48] text-[#E11D48] hover:bg-[#E11D48] hover:text-white"
+                }`}
+              >
+                <Palette className="w-3 h-3 text-[#E11D48]" />
+                <span className="hidden sm:inline">THEME</span>
+                {isEditMode && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
+                )}
+              </button>
+            </div>
           )}
         </div>
 
@@ -308,6 +323,13 @@ export default function Navbar() {
         </motion.div>
       )}
 
+      {/* Super Admin Live CMS Modal (Edit content directly without going to dashboard) */}
+      <SuperAdminLiveCMSModal
+        isOpen={showCMSModal}
+        onClose={() => setShowCMSModal(false)}
+        adminEmail={userEmail}
+      />
+
       {/* Super Admin Theme & Website Customizer Modal */}
       <SuperAdminThemeModal
         isOpen={showThemeModal}
@@ -319,7 +341,10 @@ export default function Navbar() {
       />
 
       {/* Super Admin Floating Quick Action Bar */}
-      <SuperAdminFloatingBar onOpenThemeModal={() => setShowThemeModal(true)} />
+      <SuperAdminFloatingBar
+        onOpenThemeModal={() => setShowThemeModal(true)}
+        onOpenCMSModal={() => setShowCMSModal(true)}
+      />
     </nav>
   );
 }

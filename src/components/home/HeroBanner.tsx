@@ -188,32 +188,56 @@ export default function HeroBanner() {
 
             {/* Optional Super Admin Featured Artwork Image */}
             {content.heroBannerImageUrl && (
-              <div className="relative aspect-video w-full border border-black overflow-hidden bg-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                <img
-                  src={content.heroBannerImageUrl}
-                  alt="Featured Meme Canvas Preview"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-2 left-2 px-2 py-0.5 bg-black text-white font-mono-code text-[10px] font-bold uppercase tracking-wider">
-                  FEATURED WORKBENCH
+              <SuperAdminInlineEdit
+                field="heroBannerImageUrl"
+                label="Featured Artwork Image URL"
+                value={content.heroBannerImageUrl}
+                asBlock
+              >
+                <div className="relative aspect-video w-full border border-black overflow-hidden bg-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                  <img
+                    src={content.heroBannerImageUrl}
+                    alt="Featured Meme Canvas Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 bg-black text-white font-mono-code text-[10px] font-bold uppercase tracking-wider">
+                    FEATURED WORKBENCH
+                  </div>
                 </div>
-              </div>
+              </SuperAdminInlineEdit>
             )}
 
             {/* Primary Action Buttons with Micro-Animations */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Link
-                href={content.heroButton1Url || "/editor"}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-4 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase tracking-wider font-bold transition-all shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] hover:translate-y-[-1px] active:translate-y-[1px]"
+              <SuperAdminInlineEdit
+                field="heroButton1Text"
+                label="Primary Button Text"
+                value={content.heroButton1Text || "OPEN CANVAS EDITOR ■"}
+                className="flex-1"
+                asBlock
               >
-                {content.heroButton1Text || "OPEN CANVAS EDITOR ■"}
-              </Link>
-              <Link
-                href={content.heroButton2Url || "/cards"}
-                className="inline-flex items-center justify-center gap-2 px-5 py-4 bg-white border border-black text-black hover:bg-[#F6F5EE] font-mono-code text-xs uppercase tracking-wider font-semibold transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
+                <Link
+                  href={content.heroButton1Url || "/editor"}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-4 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase tracking-wider font-bold transition-all shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] hover:translate-y-[-1px] active:translate-y-[1px]"
+                >
+                  {content.heroButton1Text || "OPEN CANVAS EDITOR ■"}
+                </Link>
+              </SuperAdminInlineEdit>
+
+              <SuperAdminInlineEdit
+                field="heroButton2Text"
+                label="Secondary Button Text"
+                value={content.heroButton2Text || "BROWSE ARCHIVE →"}
+                className="flex-1"
+                asBlock
               >
-                {content.heroButton2Text || "BROWSE ARCHIVE →"}
-              </Link>
+                <Link
+                  href={content.heroButton2Url || "/cards"}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-4 bg-white border border-black text-black hover:bg-[#F6F5EE] font-mono-code text-xs uppercase tracking-wider font-semibold transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
+                >
+                  {content.heroButton2Text || "BROWSE ARCHIVE →"}
+                </Link>
+              </SuperAdminInlineEdit>
             </div>
           </div>
 

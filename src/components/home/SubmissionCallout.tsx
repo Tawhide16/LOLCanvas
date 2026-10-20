@@ -68,21 +68,33 @@ export default function SubmissionCallout() {
 
         <div className="flex items-center gap-4 shrink-0">
           {content.submissionImageUrl && (
-            <img
-              src={content.submissionImageUrl}
-              alt="Commons Accent"
-              className="w-16 h-16 object-cover border border-white/30 hidden md:block"
-            />
+            <SuperAdminInlineEdit
+              field="submissionImageUrl"
+              label="Commons Banner Image URL"
+              value={content.submissionImageUrl}
+            >
+              <img
+                src={content.submissionImageUrl}
+                alt="Commons Accent"
+                className="w-16 h-16 object-cover border border-white/30 hidden md:block"
+              />
+            </SuperAdminInlineEdit>
           )}
 
-          <Link
-            href="/upload"
-            className="shrink-0 inline-flex items-center gap-2 px-6 py-3.5 bg-white text-black hover:bg-[#E6E4DC] font-mono-code text-xs uppercase tracking-wider font-extrabold transition-all hover:translate-y-[-1px] active:translate-y-[1px] shadow-[3px_3px_0px_0px_rgba(225,29,72,1)]"
+          <SuperAdminInlineEdit
+            field="submissionButtonText"
+            label="Commons Callout Button Text"
+            value={content.submissionButtonText || "SUBMIT TEMPLATE"}
           >
-            <UploadCloud className="w-4 h-4 text-[#E11D48]" />
-            {content.submissionButtonText || "SUBMIT TEMPLATE"}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+            <Link
+              href="/upload"
+              className="shrink-0 inline-flex items-center gap-2 px-6 py-3.5 bg-white text-black hover:bg-[#E6E4DC] font-mono-code text-xs uppercase tracking-wider font-extrabold transition-all hover:translate-y-[-1px] active:translate-y-[1px] shadow-[3px_3px_0px_0px_rgba(225,29,72,1)]"
+            >
+              <UploadCloud className="w-4 h-4 text-[#E11D48]" />
+              {content.submissionButtonText || "SUBMIT TEMPLATE"}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </SuperAdminInlineEdit>
         </div>
       </div>
     </section>

@@ -12,16 +12,19 @@ import {
   ChevronUp,
   Sparkles,
   CheckCircle2,
+  Sliders,
 } from "lucide-react";
 import { useAdminAuth } from "@/lib/useAdminAuth";
 import { useAdminEditMode } from "@/lib/useAdminEditMode";
 
 interface SuperAdminFloatingBarProps {
   onOpenThemeModal: () => void;
+  onOpenCMSModal?: () => void;
 }
 
 export default function SuperAdminFloatingBar({
   onOpenThemeModal,
+  onOpenCMSModal,
 }: SuperAdminFloatingBarProps) {
   const { isAdmin } = useAdminAuth();
   const { isEditMode, toggleEditMode, setEditMode } = useAdminEditMode();
@@ -78,6 +81,20 @@ export default function SuperAdminFloatingBar({
           <Palette className="w-3.5 h-3.5 text-[#E11D48]" />
           <span>EDIT THEME</span>
         </button>
+
+        {/* Live Site CMS Modal Button (Opens Content & Typography Manager on main page) */}
+        {onOpenCMSModal && (
+          <button
+            type="button"
+            onClick={onOpenCMSModal}
+            className="px-3 py-1 bg-[#E11D48] hover:bg-black text-white font-bold uppercase border border-black transition-colors flex items-center gap-1.5 text-[11px] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+            title="Open Live Website Content, Image & Typography Editor on this page"
+          >
+            <Sliders className="w-3.5 h-3.5 text-white" />
+            <span className="hidden sm:inline">EDIT ALL CONTENT & SIZES ■</span>
+            <span className="sm:hidden">CMS ■</span>
+          </button>
+        )}
 
         {/* Inline Edit Mode Toggle Button */}
         <button
