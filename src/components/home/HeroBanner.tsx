@@ -7,6 +7,53 @@ import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 export default function HeroBanner() {
   const { content } = useSiteContent();
 
+  // Dynamic Typography Font Sizes
+  const getHeroTitleClass = (size?: string) => {
+    switch (size) {
+      case "5xl":
+        return "text-3xl sm:text-4xl md:text-5xl leading-tight";
+      case "6xl":
+        return "text-3xl sm:text-5xl md:text-6xl leading-[0.98]";
+      case "7xl":
+        return "text-4xl sm:text-6xl md:text-7xl leading-[0.96]";
+      case "9xl":
+        return "text-5xl sm:text-7xl md:text-8xl xl:text-9xl leading-[0.9]";
+      case "8xl":
+      default:
+        return "text-4xl sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl leading-[0.95]";
+    }
+  };
+
+  const getHeroSubtitleClass = (size?: string) => {
+    switch (size) {
+      case "xs":
+        return "text-xs leading-normal";
+      case "sm":
+        return "text-xs sm:text-sm leading-relaxed";
+      case "base":
+        return "text-sm sm:text-base leading-relaxed";
+      case "xl":
+        return "text-lg sm:text-xl md:text-2xl leading-relaxed";
+      case "lg":
+      default:
+        return "text-base sm:text-lg leading-relaxed";
+    }
+  };
+
+  const getManifestoQuoteClass = (size?: string) => {
+    switch (size) {
+      case "xl":
+        return "text-lg sm:text-xl";
+      case "2xl":
+        return "text-xl sm:text-2xl";
+      case "4xl":
+        return "text-2xl sm:text-4xl";
+      case "3xl":
+      default:
+        return "text-2xl sm:text-3xl";
+    }
+  };
+
   return (
     <section className="w-full border-b border-black bg-[#FAF9F5]">
       <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-black">
@@ -27,8 +74,8 @@ export default function HeroBanner() {
               </SuperAdminInlineEdit>
             </div>
 
-            {/* Impactful Headline */}
-            <h1 className="font-display font-extrabold text-4xl sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl tracking-tight leading-[0.95] text-black">
+            {/* Impactful Headline with Dynamic Font Size */}
+            <h1 className={`font-display font-extrabold tracking-tight text-black ${getHeroTitleClass(content.heroTitleSize)}`}>
               <SuperAdminInlineEdit
                 field="heroTitle1"
                 label="Hero Headline Line 1"
@@ -48,7 +95,7 @@ export default function HeroBanner() {
               </SuperAdminInlineEdit>
             </h1>
 
-            {/* Clean, Short Subtitle */}
+            {/* Clean, Short Subtitle with Dynamic Font Size */}
             <SuperAdminInlineEdit
               field="heroSubtitle"
               label="Hero Subtitle Description"
@@ -56,7 +103,7 @@ export default function HeroBanner() {
               multiline
               asBlock
             >
-              <p className="font-body text-base sm:text-lg text-[#555555] max-w-lg leading-relaxed">
+              <p className={`font-body text-[#555555] max-w-lg ${getHeroSubtitleClass(content.heroSubtitleSize)}`}>
                 {content.heroSubtitle}
               </p>
             </SuperAdminInlineEdit>
@@ -139,24 +186,38 @@ export default function HeroBanner() {
               </span>
             </div>
 
+            {/* Optional Super Admin Featured Artwork Image */}
+            {content.heroBannerImageUrl && (
+              <div className="relative aspect-video w-full border border-black overflow-hidden bg-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                <img
+                  src={content.heroBannerImageUrl}
+                  alt="Featured Meme Canvas Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2 left-2 px-2 py-0.5 bg-black text-white font-mono-code text-[10px] font-bold uppercase tracking-wider">
+                  FEATURED WORKBENCH
+                </div>
+              </div>
+            )}
+
             {/* Primary Action Buttons with Micro-Animations */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link
-                href="/editor"
+                href={content.heroButton1Url || "/editor"}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-4 bg-black text-white hover:bg-[#222222] font-mono-code text-xs uppercase tracking-wider font-bold transition-all shadow-[3px_3px_0px_0px_rgba(225,29,72,1)] hover:translate-y-[-1px] active:translate-y-[1px]"
               >
-                OPEN CANVAS EDITOR ■
+                {content.heroButton1Text || "OPEN CANVAS EDITOR ■"}
               </Link>
               <Link
-                href="/cards"
+                href={content.heroButton2Url || "/cards"}
                 className="inline-flex items-center justify-center gap-2 px-5 py-4 bg-white border border-black text-black hover:bg-[#F6F5EE] font-mono-code text-xs uppercase tracking-wider font-semibold transition-all hover:translate-y-[-1px] active:translate-y-[1px]"
               >
-                BROWSE ARCHIVE →
+                {content.heroButton2Text || "BROWSE ARCHIVE →"}
               </Link>
             </div>
           </div>
 
-          {/* Minimalist Neo-brutalist Manifesto Panel */}
+          {/* Minimalist Neo-brutalist Manifesto Panel with Dynamic Text Size */}
           <div className="p-6 sm:p-10 bg-black text-white flex flex-col justify-center space-y-2 flex-1">
             <SuperAdminInlineEdit
               field="manifestoTag"
@@ -175,7 +236,7 @@ export default function HeroBanner() {
               multiline
               asBlock
             >
-              <blockquote className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight leading-snug">
+              <blockquote className={`font-display font-extrabold tracking-tight leading-snug ${getManifestoQuoteClass(content.manifestoQuoteSize)}`}>
                 “{content.manifestoQuote.replace(/^["“]|["”]$/g, '')}”
               </blockquote>
             </SuperAdminInlineEdit>

@@ -18,6 +18,11 @@ export const DEFAULT_SITE_CONFIG = {
   heroTitle2: "MAKE NOISE.",
   heroSubtitle:
     "Editorial, watermark-free template archive and in-browser canvas editor. Clean PNG exports without forced stamps.",
+  heroBannerImageUrl: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80",
+  heroButton1Text: "OPEN CANVAS EDITOR ■",
+  heroButton1Url: "/editor",
+  heroButton2Text: "BROWSE ARCHIVE →",
+  heroButton2Url: "/cards",
   heroMetric1Label: "TEMPLATES",
   heroMetric1Value: "26+",
   heroMetric2Label: "WATERMARKS",
@@ -29,11 +34,30 @@ export const DEFAULT_SITE_CONFIG = {
   manifestoTag: "STUDIO MANIFESTO",
   manifestoQuote: "GOOD MEMES AREN’T JUST FUNNY. THEY ARE CULTURE.",
 
+  // Text Size Management Tokens (Controls font-size across website outside template cards)
+  heroTitleSize: "8xl", // "5xl" | "6xl" | "7xl" | "8xl" | "9xl"
+  heroSubtitleSize: "lg", // "sm" | "base" | "lg" | "xl"
+  heroBadgeSize: "xs", // "2xs" | "xs" | "sm" | "base"
+  manifestoQuoteSize: "3xl", // "xl" | "2xl" | "3xl" | "4xl"
+  submissionTitleSize: "3xl", // "xl" | "2xl" | "3xl" | "4xl"
+  submissionSubtitleSize: "sm", // "xs" | "sm" | "base"
+  trendingTitleSize: "sm", // "xs" | "sm" | "base" | "lg"
+  categoryTitleSize: "sm", // "xs" | "sm" | "base"
+  catalogTitleSize: "sm", // "xs" | "sm" | "base"
+  footerDescriptionSize: "xs", // "2xs" | "xs" | "sm"
+
+  // Trending Section
+  trendingBadge: "LIVE ACTIVITY",
+  trendingTitle: "COMMUNITY DISPATCH // TRENDING ARCHIVE",
+  trendingSubtitle: "TOP CANVAS RENDERS TODAY",
+
   // Submission Callout Strip
   submissionBadge: "PUBLIC COMMONS",
   submissionTitle: "SUBMIT TO THE ARCHIVE.",
   submissionSubtitle:
     "Join verified creators uploading watermark-free formats. Every contribution is reviewed, standardized, and made available freely.",
+  submissionButtonText: "SUBMIT TEMPLATE",
+  submissionImageUrl: "",
 
   // Categories Page (/collection)
   collectionTag: "CATEGORIES (01–08)",
