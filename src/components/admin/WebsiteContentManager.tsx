@@ -17,6 +17,7 @@ import {
   Palette,
   Layout,
   Upload,
+  Menu,
 } from "lucide-react";
 import { useSiteContent, SiteConfigType } from "@/lib/useSiteContent";
 import { DEFAULT_SITE_CONFIG } from "@/app/api/admin/site-config/route";
@@ -34,7 +35,7 @@ export default function WebsiteContentManager({ adminEmail, onSuccess }: Website
   });
 
   const [activeSubTab, setActiveSubTab] = useState<
-    "hero" | "typography" | "images" | "submission" | "pages" | "footer" | "about"
+    "hero" | "navbar" | "typography" | "images" | "submission" | "pages" | "footer" | "about"
   >("hero");
 
   const [isSaving, setIsSaving] = useState(false);
@@ -191,6 +192,16 @@ export default function WebsiteContentManager({ adminEmail, onSuccess }: Website
         >
           <Layout className="w-3.5 h-3.5 text-[#E11D48]" />
           <span>[HERO & BANNER]</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab("navbar")}
+          className={`px-4 py-3 shrink-0 font-bold uppercase transition-colors flex items-center gap-2 ${
+            activeSubTab === "navbar" ? "bg-black text-white" : "text-black hover:bg-[#F0EEE6]"
+          }`}
+        >
+          <Menu className="w-3.5 h-3.5 text-[#E11D48]" />
+          <span>[NAVBAR & BUTTONS]</span>
         </button>
 
         <button
@@ -450,6 +461,245 @@ export default function WebsiteContentManager({ adminEmail, onSuccess }: Website
                       value={formData.manifestoQuote || ""}
                       onChange={(e) => handleChange("manifestoQuote", e.target.value)}
                       className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#333333] text-white text-xs font-display font-extrabold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: NAVBAR & BUTTONS CMS                                */}
+        {/* ========================================================= */}
+        {activeSubTab === "navbar" && (
+          <div className="space-y-6">
+            <div className="border border-black p-4 bg-[#FAF9F5] flex items-center justify-between">
+              <div>
+                <span className="font-mono-code text-xs font-bold text-[#E11D48] uppercase">
+                  NAVBAR LINKS & WEBSITE BUTTONS CMS:
+                </span>
+                <p className="font-mono-code text-xs text-[#555555] mt-0.5">
+                  Customize the text of all 5 navigation links, search placeholder, upload button, and buttons across the entire website.
+                </p>
+              </div>
+            </div>
+
+            {/* Live Interactive Navbar Preview */}
+            <div className="border border-black bg-white p-4 space-y-2">
+              <span className="font-mono-code text-[11px] font-bold uppercase text-[#777777]">
+                LIVE NAVBAR PREVIEW:
+              </span>
+              <div className="border border-black bg-[#FAF9F5] flex items-center divide-x divide-black text-xs font-mono-code overflow-x-auto">
+                <div className="px-4 py-3 font-display font-black uppercase flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 bg-black"></span>
+                  <span>{formData.logoText || "LOLCANVAS"}{formData.logoTag || "®"}</span>
+                </div>
+                <div className="px-4 py-3 text-[#777777] flex-1 truncate shrink-0">
+                  {formData.navSearchPlaceholder || "SEARCH TEMPLATES (MAGIC FILTER)..."}
+                </div>
+                <div className="px-3 py-3 font-medium shrink-0 bg-white">
+                  {formData.navItem1Text || "TEMPLATES"}
+                </div>
+                <div className="px-3 py-3 font-medium shrink-0">
+                  {formData.navItem2Text || "CATEGORIES"}
+                </div>
+                <div className="px-3 py-3 font-medium shrink-0">
+                  {formData.navItem3Text || "CANVAS EDITOR"}
+                </div>
+                <div className="px-3 py-3 font-medium shrink-0">
+                  {formData.navItem4Text || "ABOUT"}
+                </div>
+                <div className="px-3 py-3 font-medium shrink-0">
+                  {formData.navItem5Text || "CONTACT"}
+                </div>
+                <div className="px-4 py-3 font-bold bg-[#FAF9F5] text-black shrink-0 flex items-center gap-1">
+                  <span className="text-[#E11D48]">+</span>
+                  <span>{formData.navUploadButtonText || "UPLOAD"}</span>
+                </div>
+                <div className="px-4 py-3 font-bold bg-[#FFE4E6] text-[#E11D48] shrink-0">
+                  {formData.navAdminButtonText || "SUPER ADMIN"}
+                </div>
+              </div>
+            </div>
+
+            {/* Grid Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Navbar Navigation Links */}
+              <div className="border border-black p-5 bg-white space-y-4">
+                <div className="flex items-center justify-between border-b border-black pb-2">
+                  <span className="font-mono-code text-xs font-bold uppercase text-black">
+                    NAVBAR MENU ITEM TEXTS (5 LINKS)
+                  </span>
+                  <span className="text-[10px] font-mono-code text-[#777777]">MAIN HEADER</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    LINK 1 TEXT (/cards)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navItem1Text || ""}
+                    onChange={(e) => handleChange("navItem1Text", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="TEMPLATES"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    LINK 2 TEXT (/collection)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navItem2Text || ""}
+                    onChange={(e) => handleChange("navItem2Text", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="CATEGORIES"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    LINK 3 TEXT (/edit)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navItem3Text || ""}
+                    onChange={(e) => handleChange("navItem3Text", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="CANVAS EDITOR"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    LINK 4 TEXT (/about)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navItem4Text || ""}
+                    onChange={(e) => handleChange("navItem4Text", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="ABOUT"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    LINK 5 TEXT (/contact)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navItem5Text || ""}
+                    onChange={(e) => handleChange("navItem5Text", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="CONTACT"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    NAVBAR MENU FONT SIZE
+                  </label>
+                  <select
+                    value={formData.navbarTextSize || "sm"}
+                    onChange={(e) => handleChange("navbarTextSize", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold cursor-pointer"
+                  >
+                    <option value="xs">Compact (10px - 11px)</option>
+                    <option value="sm">Standard (11px - 12px) [DEFAULT]</option>
+                    <option value="base">Prominent (13px - 14px)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Right Column: Search Box & Global Action Buttons */}
+              <div className="border border-black p-5 bg-white space-y-4">
+                <div className="flex items-center justify-between border-b border-black pb-2">
+                  <span className="font-mono-code text-xs font-bold uppercase text-black">
+                    NAVBAR BUTTONS & GLOBAL CALLS-TO-ACTION
+                  </span>
+                  <span className="text-[10px] font-mono-code text-[#777777]">ALL BUTTONS</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    NAVBAR UPLOAD BUTTON TEXT
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navUploadButtonText || ""}
+                    onChange={(e) => handleChange("navUploadButtonText", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="UPLOAD"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    SEARCH BAR PLACEHOLDER TEXT
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navSearchPlaceholder || ""}
+                    onChange={(e) => handleChange("navSearchPlaceholder", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs uppercase"
+                    placeholder="SEARCH TEMPLATES (MAGIC FILTER)..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    SUPER ADMIN PORTAL BUTTON TEXT
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.navAdminButtonText || ""}
+                    onChange={(e) => handleChange("navAdminButtonText", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="SUPER ADMIN"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono-code text-black font-bold uppercase mb-1">
+                    CREATOR SIGN-IN BUTTON TEXT
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.headerLoginButtonText || ""}
+                    onChange={(e) => handleChange("headerLoginButtonText", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-black font-mono-code text-xs font-bold uppercase"
+                    placeholder="SIGN IN"
+                  />
+                </div>
+
+                <div className="pt-2 border-t border-black/20 space-y-3">
+                  <span className="font-mono-code text-[11px] font-bold uppercase text-[#E11D48] block">
+                    CARD & REMIX BUTTONS:
+                  </span>
+                  <div>
+                    <label className="block text-[10px] font-mono-code text-[#666666] uppercase">
+                      CARD REMIX IN CANVAS BUTTON
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cardRemixButtonText || "REMIX IN CANVAS"}
+                      onChange={(e) => handleChange("cardRemixButtonText", e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-black font-mono-code text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono-code text-[#666666] uppercase">
+                      CARD DOWNLOAD PNG BUTTON
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cardDownloadButtonText || "DOWNLOAD PNG"}
+                      onChange={(e) => handleChange("cardDownloadButtonText", e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-black font-mono-code text-xs font-bold"
                     />
                   </div>
                 </div>

@@ -7,10 +7,24 @@ export const DEFAULT_SITE_CONFIG = {
   logoText: "LOLCANVAS",
   logoTag: "®",
 
-  // Top Bar & Navbar
+  // Top Bar & Navbar Texts & Buttons
   topBarTitle: "LOLCANVAS® ARCHIVE",
   topBarBadge: "100% WATERMARK-FREE",
   topBarEmail: "DESK@LOLCANVAS.STUDIO",
+  navItem1Text: "TEMPLATES",
+  navItem2Text: "CATEGORIES",
+  navItem3Text: "CANVAS EDITOR",
+  navItem4Text: "ABOUT",
+  navItem5Text: "CONTACT",
+  navUploadButtonText: "UPLOAD",
+  navSearchPlaceholder: "SEARCH TEMPLATES (MAGIC FILTER)...",
+  navAdminButtonText: "SUPER ADMIN",
+  navbarTextSize: "sm", // "xs" | "sm" | "base"
+
+  // Global Action Buttons
+  cardRemixButtonText: "REMIX IN CANVAS",
+  cardDownloadButtonText: "DOWNLOAD PNG",
+  headerLoginButtonText: "SIGN IN",
 
   // Home Hero Banner
   heroBadge: "OPEN MEME ARCHIVE & CANVAS ENGINE",

@@ -11,6 +11,7 @@ import SuperAdminFloatingBar from "@/components/common/SuperAdminFloatingBar";
 import MagicSearchDropdown from "./MagicSearchDropdown";
 import { useAdminEditMode } from "@/lib/useAdminEditMode";
 import { useSiteLogo } from "@/lib/useSiteLogo";
+import { useSiteContent } from "@/lib/useSiteContent";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export default function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const { isEditMode } = useAdminEditMode();
   const logoConfig = useSiteLogo();
+  const { content } = useSiteContent();
   const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
@@ -83,11 +85,11 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { label: "TEMPLATES", href: "/cards" },
-    { label: "CATEGORIES", href: "/collection" },
-    { label: "CANVAS EDITOR", href: "/edit", isEditor: true },
-    { label: "ABOUT", href: "/about" },
-    { label: "CONTACT", href: "/contact" },
+    { label: content.navItem1Text || "TEMPLATES", href: "/cards" },
+    { label: content.navItem2Text || "CATEGORIES", href: "/collection" },
+    { label: content.navItem3Text || "CANVAS EDITOR", href: "/edit", isEditor: true },
+    { label: content.navItem4Text || "ABOUT", href: "/about" },
+    { label: content.navItem5Text || "CONTACT", href: "/contact" },
   ];
 
   return (
@@ -151,7 +153,7 @@ export default function Navbar() {
                 setSearchQuery(e.target.value);
                 if (!showSearchDropdown) setShowSearchDropdown(true);
               }}
-              placeholder="SEARCH TEMPLATES (MAGIC FILTER)..."
+              placeholder={content.navSearchPlaceholder || "SEARCH TEMPLATES (MAGIC FILTER)..."}
               aria-label="Search meme templates"
               className="w-full bg-transparent font-mono-code text-[12px] md:text-[13px] text-black placeholder:text-[#999999] focus:outline-none uppercase tracking-wider truncate"
             />
@@ -184,8 +186,11 @@ export default function Navbar() {
           />
         </div>
 
-        {/* Desktop Links with Framer Motion Active Tab indicator */}
-        <div className="hidden xl:flex items-stretch divide-x divide-black shrink-0 font-mono-code text-[12px] tracking-wider font-medium">
+        {/* Desktop Links with Framer Motion Active Tab indicator and Dynamic Text Size */}
+        <div className={`hidden xl:flex items-stretch divide-x divide-black shrink-0 font-mono-code tracking-wider font-medium ${
+          content.navbarTextSize === 'xs' ? 'text-[10px]' :
+          content.navbarTextSize === 'base' ? 'text-[14px]' : 'text-[12px]'
+        }`}>
           {navLinks.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -220,7 +225,7 @@ export default function Navbar() {
           className="flex items-center px-4 md:px-5 bg-[#FAF9F5] hover:bg-black hover:text-white transition-colors shrink-0 font-mono-code text-[12px] font-bold tracking-wider group"
         >
           <Plus className="w-4 h-4 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-          <span className="hidden sm:inline">UPLOAD</span>
+          <span className="hidden sm:inline">{content.navUploadButtonText || "UPLOAD"}</span>
         </Link>
 
         {/* Super Admin Portal Cell (ONLY VISIBLE WHEN SUPER ADMIN / ADMIN IS LOGGED IN) */}
@@ -231,7 +236,7 @@ export default function Navbar() {
             title="Super Admin Control Center"
           >
             <Crown className="w-3.5 h-3.5 mr-1 text-[#E11D48] group-hover:text-white transition-colors" />
-            <span className="hidden sm:inline">SUPER ADMIN</span>
+            <span className="hidden sm:inline">{content.navAdminButtonText || "SUPER ADMIN"}</span>
             <span className="sm:hidden">ADMIN</span>
           </Link>
         )}
@@ -251,9 +256,9 @@ export default function Navbar() {
               </span>
             </span>
           ) : (
-            <span suppressHydrationWarning className="flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-[#555555] group-hover:text-black" />
-              <span>LOGIN</span>
+            <span className="flex items-center gap-1 font-bold text-black group-hover:text-[#E11D48] transition-colors">
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{content.headerLoginButtonText || "SIGN IN"}</span>
             </span>
           )}
         </Link>
