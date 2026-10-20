@@ -1723,7 +1723,7 @@ export default function AdminPage() {
                       { tableName: "users", prettySize: "48 KB", totalBytes: 49152, rowCount: 2 },
                       { tableName: "collections", prettySize: "24 KB", totalBytes: 24576, rowCount: 0 },
                       { tableName: "collection_items", prettySize: "24 KB", totalBytes: 24576, rowCount: 0 },
-                    ]).map((table) => {
+                    ]).map((table, idx) => {
                       const totalBytes = stats?.database?.usedBytes || 17842176;
                       const tablePercent = totalBytes > 0
                         ? ((table.totalBytes / totalBytes) * 100).toFixed(1)
@@ -1738,7 +1738,7 @@ export default function AdminPage() {
                       else if (table.tableName === "collection_items") purpose = "Meme to collection mapping foreign keys";
 
                       return (
-                        <tr key={table.tableName} className="hover:bg-[#FAF9F5] transition-colors">
+                        <tr key={`${table.tableName}-${idx}`} className="hover:bg-[#FAF9F5] transition-colors">
                           <td className="p-3 font-bold border-r border-black text-black">
                             {table.tableName}
                           </td>

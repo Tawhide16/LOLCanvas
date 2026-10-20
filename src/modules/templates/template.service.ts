@@ -64,7 +64,7 @@ export async function getTemplates(query: TemplateQueryInput) {
     ]);
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("DB connection timeout (1500ms)")), 1500)
+      setTimeout(() => reject(new Error("DB connection timeout (5000ms)")), 5000)
     );
 
     const [templatesResult, memesResult]: any = await Promise.race([dbPromise, timeoutPromise]);

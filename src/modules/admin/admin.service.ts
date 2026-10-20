@@ -109,6 +109,7 @@ export async function getSystemStats(): Promise<SystemStats> {
         pg_total_relation_size(relid) as total_bytes,
         n_live_tup as row_estimate
       FROM pg_catalog.pg_stat_user_tables
+      WHERE schemaname = 'public'
       ORDER BY pg_total_relation_size(relid) DESC
     `);
     tableSizes = tableRes.map((t) => ({
