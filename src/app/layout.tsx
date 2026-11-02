@@ -10,7 +10,6 @@ import HydrationFix from "@/components/layout/HydrationFix";
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
-  weight: ["500", "700"],
 });
 
 const spaceMono = Space_Mono({
@@ -22,7 +21,6 @@ const spaceMono = Space_Mono({
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {

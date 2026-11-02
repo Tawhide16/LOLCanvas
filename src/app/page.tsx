@@ -6,7 +6,7 @@ import TemplateGrid from "@/components/archive/TemplateGrid";
 import SubmissionCallout from "@/components/home/SubmissionCallout";
 import { getTemplates } from "@/modules/templates/template.service";
 
-export const instant = false;
+
 
 async function getInitialTemplates() {
   try {

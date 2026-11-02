@@ -12,6 +12,7 @@ interface MemeCardProps {
   currentUserEmail?: string | null;
   onDelete?: (id: string, title: string) => void;
   onEdit?: (template: Template) => void;
+  priority?: boolean;
 }
 
 export default function MemeCard({
@@ -21,6 +22,7 @@ export default function MemeCard({
   currentUserEmail,
   onDelete,
   onEdit,
+  priority = false,
 }: MemeCardProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -224,7 +226,7 @@ export default function MemeCard({
           <img
             src={displayImage}
             alt={template.title}
-            loading="eager"
+            loading={priority ? "eager" : "lazy"}
             decoding="async"
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {

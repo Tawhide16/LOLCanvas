@@ -2,6 +2,7 @@ import * as fabric from "fabric";
 import { SnappingManager } from "./snappingGuides";
 import { useEditorStore } from "./editorStore";
 import { loadGoogleFont, ensureFontsReady } from "@/lib/googleFonts";
+import { markCanvasDirty } from "./projectStorage";
 
 // Neo-brutalist styling for transformer controls
 export function applyNeoBrutalistControls(obj: fabric.FabricObject) {
@@ -206,6 +207,7 @@ export class FabricAdapter {
 
   public saveHistoryState() {
     if (!this.canvas || this.isInternalUpdate) return;
+    markCanvasDirty();
     const canvasJson = JSON.stringify((this.canvas as any).toJSON(["id", "name", "isSticker", "stickerSymbol", "imageName", "previewUrl", "lockMovementX", "lockMovementY", "lockRotation", "lockScalingX", "lockScalingY"]));
     const { width, height, backgroundColor, layers } = useEditorStore.getState();
 
@@ -232,10 +234,15 @@ export class FabricAdapter {
 
       useEditorStore.getState().setCanvasSize(step.width, step.height);
       useEditorStore.getState().setBackgroundColor(step.backgroundColor);
-      useEditorStore.getState().setLayers(step.layersMeta);
+      if (step.layersMeta && step.layersMeta.length > 0) {
+        useEditorStore.getState().setLayers(step.layersMeta);
+      } else {
+        this.syncLayersToStore();
+      }
     } finally {
       this.isInternalUpdate = false;
       this.updateSelectionState();
+      this.syncLayersToStore();
     }
   }
 

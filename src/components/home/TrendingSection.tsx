@@ -275,7 +275,7 @@ export default function TrendingSection({ initialTemplates }: TrendingSectionPro
                     <img
                       src={item.svgDataUri || item.previewUrl || item.originalUrl || item.imageUrl || ""}
                       alt={item.title}
-                      loading="eager"
+                      loading={idx < 2 ? "eager" : "lazy"}
                       decoding="async"
                       onError={(e) => {
                         const fallback = item.originalUrl || item.previewUrl || item.svgDataUri;

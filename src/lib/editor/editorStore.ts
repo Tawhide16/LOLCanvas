@@ -95,7 +95,7 @@ export interface EditorState {
   setShowExportModal: (show: boolean) => void;
 }
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 25;
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   width: 1080,

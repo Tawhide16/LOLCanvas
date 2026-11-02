@@ -680,7 +680,7 @@ export default function TemplateGrid({
         <MemeCardSkeleton count={8} />
       ) : filteredTemplates.length > 0 ? (
         <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-[#FAF9F5]">
-          {filteredTemplates.map((template) => (
+          {filteredTemplates.map((template, idx) => (
             <MemeCard
               key={template.id}
               template={template}
@@ -689,6 +689,7 @@ export default function TemplateGrid({
               onDelete={handleAdminDeleteCard}
               onEdit={openEditModal}
               onPreview={setActivePreviewTemplate}
+              priority={idx < 4}
             />
           ))}
         </div>

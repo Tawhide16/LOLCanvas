@@ -33,10 +33,45 @@ export interface ProjectData {
   savedAt: string;
 }
 
-export async function autosaveProject(): Promise<void> {
+let lastSavedCanvasJson: string | null = null;
+let isCanvasDirty = false;
+
+export function markCanvasDirty(): void {
+  isCanvasDirty = true;
+}
+
+export async function autosaveProject(force = false): Promise<void> {
   try {
     if (!fabricAdapter.canvas) return;
-    const canvasJson = JSON.stringify((fabricAdapter.canvas as any).toJSON(["id", "name", "isSticker", "stickerSymbol", "imageName", "previewUrl", "lockMovementX", "lockMovementY", "lockRotation", "lockScalingX", "lockScalingY"]));
+    // Skip serialization entirely if nothing was modified
+    if (!force && !isCanvasDirty) {
+      return;
+    }
+
+    const canvasJson = JSON.stringify(
+      (fabricAdapter.canvas as any).toJSON([
+        "id",
+        "name",
+        "isSticker",
+        "stickerSymbol",
+        "imageName",
+        "previewUrl",
+        "lockMovementX",
+        "lockMovementY",
+        "lockRotation",
+        "lockScalingX",
+        "lockScalingY",
+      ])
+    );
+
+    // Skip expensive disk/IndexedDB writes if canvas state is unchanged
+    if (!force && lastSavedCanvasJson === canvasJson) {
+      isCanvasDirty = false;
+      return;
+    }
+    lastSavedCanvasJson = canvasJson;
+    isCanvasDirty = false;
+
     const { width, height, backgroundColor } = useEditorStore.getState();
 
     const data: ProjectData = {
@@ -72,6 +107,7 @@ export async function getAutosavedProject(): Promise<ProjectData | null> {
 
 export async function clearAutosavedProject(): Promise<void> {
   try {
+    lastSavedCanvasJson = null;
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).delete(AUTOSAVE_KEY);

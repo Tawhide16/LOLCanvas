@@ -311,7 +311,10 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
       }
     }
 
-    loadAllUploadedTemplates();
+    // Defer community memes fetching slightly so the canvas editor initializes instantly
+    const timer = setTimeout(() => {
+      loadAllUploadedTemplates();
+    }, 500);
 
     // Load saved personal overlays from local storage
     try {
@@ -320,6 +323,8 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
         setPersonalOverlays(JSON.parse(saved));
       }
     } catch (e) {}
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Dynamically load custom or uploaded templates by id or slug

@@ -10,6 +10,7 @@ import {
   saveCommunityTemplate,
   deleteStoredCommunityTemplate,
 } from "@/lib/communityStore";
+import { withDbTimeout } from "@/lib/dbHealth";
 
 const CACHE_TTL_SECONDS = 60; // Cache templates for 60 seconds
 
@@ -32,47 +33,41 @@ export async function getTemplates(query: TemplateQueryInput) {
     console.warn("Redis read failed, querying database/memory:", err);
   }
 
-  // 2. Query Data from Neon DB in parallel (with 1.5s timeout fallback if DB is unreachable)
-  let dbTemplates: any[] = [];
-  let publicMemes: any[] = [];
-  try {
-    const dbPromise = Promise.all([
-      prisma.template.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 60,
-      }),
-      prisma.meme.findMany({
-        where: { isPublic: true },
-        select: {
-          id: true,
-          title: true,
-          previewUrl: true,
-          width: true,
-          height: true,
-          downloads: true,
-          createdAt: true,
-          author: {
-            select: {
-              email: true,
-              name: true,
+  // 2. Query Data from DB with circuit breaker and 500ms timeout
+  const [queriedTemplates, queriedMemes] = await withDbTimeout(
+    () =>
+      Promise.all([
+        prisma.template.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 60,
+        }),
+        prisma.meme.findMany({
+          where: { isPublic: true },
+          select: {
+            id: true,
+            title: true,
+            previewUrl: true,
+            width: true,
+            height: true,
+            downloads: true,
+            createdAt: true,
+            author: {
+              select: {
+                email: true,
+                name: true,
+              },
             },
           },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 30,
-      }),
-    ]);
+          orderBy: { createdAt: "desc" },
+          take: 30,
+        }),
+      ]),
+    [[], []] as [any[], any[]],
+    500
+  );
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("DB connection timeout (5000ms)")), 5000)
-    );
-
-    const [templatesResult, memesResult]: any = await Promise.race([dbPromise, timeoutPromise]);
-    dbTemplates = templatesResult;
-    publicMemes = memesResult;
-  } catch (err: any) {
-    console.warn("DB query unavailable, using instant built-in fallback:", err?.message || err);
-  }
+  let dbTemplates: any[] = queriedTemplates;
+  const publicMemes: any[] = queriedMemes;
 
   // Fallback to built-in catalog if DB query returned empty
   if (dbTemplates.length === 0) {
@@ -113,7 +108,7 @@ export async function getTemplates(query: TemplateQueryInput) {
       format: "classic",
       formatLabel: "Standard Format",
       svgDataUri: t.svgDataUri,
-      originalUrl: originalUrl || t.svgDataUri,
+      originalUrl: originalUrl && (originalUrl.startsWith("http") || originalUrl.length < 200000) ? originalUrl : t.svgDataUri,
       width: t.width,
       height: t.height,
       aspectRatio: `${t.width}:${t.height}`,
@@ -135,6 +130,9 @@ export async function getTemplates(query: TemplateQueryInput) {
   const existingSlugs = new Set(results.map((r) => r.slug || r.id));
   for (const mem of allCommunityTemplates) {
     if (!existingSlugs.has(mem.slug) && !existingSlugs.has(mem.id)) {
+      // Keep listing payload lightweight; full raw image is fetched on-demand by ID
+      const previewImg = mem.svgDataUri || mem.originalUrl;
+      const listingOriginal = mem.originalUrl && (mem.originalUrl.startsWith("http") || mem.originalUrl.length < 200000) ? mem.originalUrl : previewImg;
       results.unshift({
         id: mem.id,
         slug: mem.slug,
@@ -144,8 +142,8 @@ export async function getTemplates(query: TemplateQueryInput) {
         categoryName: (mem.category || "COMMUNITY").toUpperCase(),
         format: "classic",
         formatLabel: "Community Upload",
-        svgDataUri: mem.svgDataUri,
-        originalUrl: mem.originalUrl || mem.svgDataUri,
+        svgDataUri: previewImg,
+        originalUrl: listingOriginal,
         width: mem.width || 1080,
         height: mem.height || 1080,
         aspectRatio: `${mem.width || 1080}:${mem.height || 1080}`,

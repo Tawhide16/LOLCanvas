@@ -45,12 +45,18 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      // 3. Fallback to database query
+      // 3. Fallback to database query with circuit breaker
       try {
+        const { withDbTimeout } = await import("@/lib/dbHealth");
         const prisma = (await import("@/lib/prisma")).default;
-        const t = await prisma.template.findFirst({
-          where: { OR: [{ id }, { slug: id }] },
-        });
+        const t = await withDbTimeout(
+          () =>
+            prisma.template.findFirst({
+              where: { OR: [{ id }, { slug: id }] },
+            }),
+          null,
+          400
+        );
         if (t) {
           const originalUrl =
             t.defaultBottomText &&
@@ -81,7 +87,7 @@ export async function GET(req: NextRequest) {
     const response = successResponse(result, "Templates retrieved successfully");
     response.headers.set(
       "Cache-Control",
-      "no-cache, no-store, must-revalidate"
+      "public, s-maxage=60, stale-while-revalidate=300"
     );
     return response;
   } catch (err: unknown) {

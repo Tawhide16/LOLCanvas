@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withDbTimeout } from "@/lib/dbHealth";
 
 export const DEFAULT_SITE_CONFIG = {
   // Brand & Logo
@@ -131,11 +132,16 @@ let inMemoryConfig = { ...DEFAULT_SITE_CONFIG };
 
 export async function GET() {
   try {
-    // Read the latest SITE_CONFIG_UPDATE or SITE_LOGO_UPDATE from database
-    const latestConfigLog = await prisma.auditLog.findFirst({
-      where: { action: { in: ["SITE_CONFIG_UPDATE", "SITE_LOGO_UPDATE"] } },
-      orderBy: { createdAt: "desc" },
-    });
+    // Read the latest SITE_CONFIG_UPDATE or SITE_LOGO_UPDATE from database with circuit breaker
+    const latestConfigLog = await withDbTimeout(
+      () =>
+        prisma.auditLog.findFirst({
+          where: { action: { in: ["SITE_CONFIG_UPDATE", "SITE_LOGO_UPDATE"] } },
+          orderBy: { createdAt: "desc" },
+        }),
+      null,
+      400
+    );
 
     if (latestConfigLog && latestConfigLog.details) {
       try {
@@ -156,17 +162,21 @@ export async function GET() {
           },
         };
         inMemoryConfig = merged;
-        return NextResponse.json({
+        const res = NextResponse.json({
           success: true,
           data: merged,
         });
+        res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+        return res;
       } catch (e) {}
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       data: inMemoryConfig,
     });
+    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+    return res;
   } catch (error) {
     return NextResponse.json({
       success: true,
