@@ -25,11 +25,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://lol-canvas.vercel.app"),
-  title: "LOLCanvas® — Memes That Make Noise | Studio & Archive",
+  title: "LOLCanvas",
   description:
     "Editorial, watermark-free meme template archive and in-browser canvas editor built around a Swiss architectural grid and modern neo-brutalist visual language.",
   icons: {
-    icon: "/logo-icon.png",
+    icon: [
+      { url: "/logo-icon.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/logo-icon.png",
     apple: "/logo-icon.png",
   },
   openGraph: {
@@ -37,7 +41,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://lol-canvas.vercel.app",
     siteName: "LOLCanvas",
-    title: "LOLCanvas® — Memes That Make Noise | Studio & Archive",
+    title: "LOLCanvas",
     description:
       "Editorial, watermark-free meme template archive and in-browser canvas editor. High-resolution exports without forced watermarks.",
     images: [
@@ -51,7 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "LOLCanvas® — Memes That Make Noise",
+    title: "LOLCanvas",
     description:
       "Editorial, watermark-free meme template archive and in-browser canvas editor.",
     images: ["/logo-icon.png"],
@@ -81,6 +85,9 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${spaceMono.variable} ${inter.variable}`}
     >
       <head>
+        <link rel="icon" type="image/png" href="/logo-icon.png" />
+        <link rel="shortcut icon" href="/logo-icon.png" />
+        <link rel="apple-touch-icon" href="/logo-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){
