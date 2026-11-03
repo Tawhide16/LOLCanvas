@@ -30,6 +30,18 @@ export function useSiteLogo(): SiteLogoConfig {
             logoTag: parsed.logoTag !== undefined ? parsed.logoTag : DEFAULT_LOGO_CONFIG.logoTag,
           });
         }
+      } else {
+        const siteConfigCached = localStorage.getItem("lolcanvas_site_config");
+        if (siteConfigCached) {
+          const parsed = JSON.parse(siteConfigCached);
+          if (parsed.logoUrl) {
+            setLogoConfig({
+              logoUrl: parsed.logoUrl || DEFAULT_LOGO_CONFIG.logoUrl,
+              logoText: parsed.logoText || DEFAULT_LOGO_CONFIG.logoText,
+              logoTag: parsed.logoTag !== undefined ? parsed.logoTag : DEFAULT_LOGO_CONFIG.logoTag,
+            });
+          }
+        }
       }
     } catch (e) {}
 
@@ -63,20 +75,38 @@ export function useSiteLogo(): SiteLogoConfig {
       }
     };
 
+    const handleContentChange = (e: any) => {
+      if (e.detail?.logoUrl) {
+        setLogoConfig({
+          logoUrl: e.detail.logoUrl || DEFAULT_LOGO_CONFIG.logoUrl,
+          logoText: e.detail.logoText || DEFAULT_LOGO_CONFIG.logoText,
+          logoTag: e.detail.logoTag !== undefined ? e.detail.logoTag : DEFAULT_LOGO_CONFIG.logoTag,
+        });
+      }
+    };
+
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "lolcanvas_custom_logo" && e.newValue) {
+      if ((e.key === "lolcanvas_custom_logo" || e.key === "lolcanvas_site_config") && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setLogoConfig(parsed);
+          if (parsed.logoUrl) {
+            setLogoConfig({
+              logoUrl: parsed.logoUrl || DEFAULT_LOGO_CONFIG.logoUrl,
+              logoText: parsed.logoText || DEFAULT_LOGO_CONFIG.logoText,
+              logoTag: parsed.logoTag !== undefined ? parsed.logoTag : DEFAULT_LOGO_CONFIG.logoTag,
+            });
+          }
         } catch (err) {}
       }
     };
 
     window.addEventListener("lolcanvas_logo_changed", handleLogoChange);
+    window.addEventListener("lolcanvas_content_changed", handleContentChange);
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener("lolcanvas_logo_changed", handleLogoChange);
+      window.removeEventListener("lolcanvas_content_changed", handleContentChange);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);

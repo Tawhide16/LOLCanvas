@@ -870,6 +870,9 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
             <img
               src={siteLogo.logoUrl}
               alt="LOLCanvas Icon"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/logo-icon.png";
+              }}
               className="w-6 h-6 object-contain"
             />
             <span className="font-display font-extrabold text-base tracking-tight text-black uppercase">

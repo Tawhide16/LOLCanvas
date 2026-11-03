@@ -27,6 +27,9 @@ export default function Navbar() {
   const { isEditMode } = useAdminEditMode();
   const logoConfig = useSiteLogo();
   const { content } = useSiteContent();
+  const activeLogoUrl = logoConfig.logoUrl || content.logoUrl || "/logo-icon.png";
+  const activeLogoText = logoConfig.logoText || content.logoText || "LOLCANVAS";
+  const activeLogoTag = logoConfig.logoTag !== undefined ? logoConfig.logoTag : (content.logoTag || "®");
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showCMSModal, setShowCMSModal] = useState(false);
 
@@ -105,15 +108,18 @@ export default function Navbar() {
             className="flex items-center gap-2.5"
           >
             <img
-              src={logoConfig.logoUrl}
+              src={activeLogoUrl}
               alt="LOLCanvas Icon"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/logo-icon.png";
+              }}
               className="w-7 h-7 object-contain transition-transform group-hover:scale-110 duration-200"
             />
             <span className="font-display font-extrabold text-lg md:text-xl tracking-tight text-black uppercase">
-              {logoConfig.logoText}
-              {logoConfig.logoTag && (
+              {activeLogoText}
+              {activeLogoTag && (
                 <span className="text-[11px] align-super font-mono-code font-normal ml-0.5">
-                  {logoConfig.logoTag}
+                  {activeLogoTag}
                 </span>
               )}
             </span>

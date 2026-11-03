@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useSiteContent } from "@/lib/useSiteContent";
+import { useSiteLogo } from "@/lib/useSiteLogo";
 import SuperAdminInlineEdit from "@/components/common/SuperAdminInlineEdit";
 
 export default function HeroBanner() {
   const { content } = useSiteContent();
+  const logoConfig = useSiteLogo();
+  const activeLogoUrl = logoConfig.logoUrl || content.logoUrl || "/logo-icon.png";
 
   // Dynamic Typography Font Sizes
   const getHeroTitleClass = (size?: string) => {
@@ -68,7 +71,14 @@ export default function HeroBanner() {
                 value={content.heroBadge}
               >
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-[#E6E4DC] border border-black text-[11px] font-mono-code uppercase tracking-wider text-black font-semibold">
-                  <span className="w-2 h-2 bg-[#E11D48]"></span>
+                  <img
+                    src={activeLogoUrl}
+                    alt="Logo"
+                    className="w-3.5 h-3.5 object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "/logo-icon.png";
+                    }}
+                  />
                   {content.heroBadge}
                 </div>
               </SuperAdminInlineEdit>

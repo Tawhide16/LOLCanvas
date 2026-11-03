@@ -19,6 +19,9 @@ export default function Footer() {
             <img
               src={siteLogo.logoUrl}
               alt="LOLCanvas Icon"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/logo-icon.png";
+              }}
               className="w-6 h-6 object-contain bg-white rounded-xs p-0.5"
             />
             <span className="font-display font-extrabold text-base tracking-tight text-white uppercase">
