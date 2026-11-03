@@ -48,7 +48,7 @@ async function HomeDynamicCatalog() {
           </span>
         </div>
 
-        <TemplateGrid initialCategory="all" initialTemplates={initialTemplates} />
+        <TemplateGrid initialCategory="all" initialTemplates={initialTemplates} itemsPerPage={16} />
       </section>
     </>
   );

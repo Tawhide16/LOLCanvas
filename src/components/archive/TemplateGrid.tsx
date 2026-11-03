@@ -2,7 +2,27 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, ExternalLink, Wand2, Download, Tag, Info, Plus, UploadCloud, Trash2, Crown, CheckCircle2, AlertTriangle, Edit3, Lock, Loader2 } from "lucide-react";
+import {
+  X,
+  ExternalLink,
+  Wand2,
+  Download,
+  Tag,
+  Info,
+  Plus,
+  UploadCloud,
+  Trash2,
+  Crown,
+  CheckCircle2,
+  AlertTriangle,
+  Edit3,
+  Lock,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import FilterBar from "./FilterBar";
 import MemeCard from "./MemeCard";
 import MemeCardSkeleton from "./MemeCardSkeleton";
@@ -14,17 +34,21 @@ interface TemplateGridProps {
   initialCategory?: string;
   searchQuery?: string;
   initialTemplates?: Template[];
+  itemsPerPage?: number;
 }
 
 export default function TemplateGrid({
   initialCategory = "all",
   searchQuery = "",
   initialTemplates = [],
+  itemsPerPage = 16,
 }: TemplateGridProps) {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState("trending");
   const [format, setFormat] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [activePreviewTemplate, setActivePreviewTemplate] = useState<Template | null>(null);
+  const gridTopRef = useRef<HTMLDivElement>(null);
 
   // Dynamic template archive state: Instant initial data from SSR prop (0ms delay)
   const [templates, setTemplates] = useState<Template[]>(() => {
@@ -551,8 +575,43 @@ export default function TemplateGrid({
     return result;
   }, [templates, selectedCategory, format, searchQuery, sortBy]);
 
+  // Reset pagination to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, format, searchQuery, sortBy]);
+
+  // Pagination logic (16 cards per page by default)
+  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / itemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedTemplates = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+    return filteredTemplates.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTemplates, safeCurrentPage, itemsPerPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === safeCurrentPage) return;
+    setCurrentPage(newPage);
+    gridTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | string)[] = [];
+    if (safeCurrentPage <= 4) {
+      pages.push(1, 2, 3, 4, 5, "...", totalPages);
+    } else if (safeCurrentPage >= totalPages - 3) {
+      pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, "...", totalPages);
+    }
+    return pages;
+  };
+
   return (
-    <section className="w-full bg-[#FAF9F5]">
+    <section ref={gridTopRef} className="w-full bg-[#FAF9F5]">
       {/* Super Admin Control Strip (Visible ONLY to Admin) */}
       {isAdmin && (
         <div className="bg-[#FFF1F2] border-b border-black p-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono-code text-xs">
@@ -679,20 +738,112 @@ export default function TemplateGrid({
       {isLoadingTemplates ? (
         <MemeCardSkeleton count={8} />
       ) : filteredTemplates.length > 0 ? (
-        <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-[#FAF9F5]">
-          {filteredTemplates.map((template, idx) => (
-            <MemeCard
-              key={template.id}
-              template={template}
-              isAdmin={isAdmin}
-              currentUserEmail={currentUserEmail}
-              onDelete={handleAdminDeleteCard}
-              onEdit={openEditModal}
-              onPreview={setActivePreviewTemplate}
-              priority={idx < 4}
-            />
-          ))}
-        </div>
+        <>
+          <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 bg-[#FAF9F5]">
+            {paginatedTemplates.map((template, idx) => (
+              <MemeCard
+                key={template.id}
+                template={template}
+                isAdmin={isAdmin}
+                currentUserEmail={currentUserEmail}
+                onDelete={handleAdminDeleteCard}
+                onEdit={openEditModal}
+                onPreview={setActivePreviewTemplate}
+                priority={idx < 4 && safeCurrentPage === 1}
+              />
+            ))}
+          </div>
+
+          {/* Neo-brutalist Pagination Bar (16 items per page) */}
+          {totalPages > 1 && (
+            <div className="border-t border-black bg-white px-4 sm:px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4 font-mono-code text-xs">
+              {/* Pagination Info */}
+              <div className="flex items-center gap-2 text-black font-medium">
+                <span className="w-2 h-2 bg-[#E11D48] inline-block" />
+                <span>
+                  SHOWING{" "}
+                  <strong className="font-bold text-black">
+                    {(safeCurrentPage - 1) * itemsPerPage + 1}–
+                    {Math.min(safeCurrentPage * itemsPerPage, filteredTemplates.length)}
+                  </strong>{" "}
+                  OF <strong className="font-bold text-black">{filteredTemplates.length}</strong> TEMPLATES
+                </span>
+                <span className="text-[#777777] hidden sm:inline">
+                  // PAGE {safeCurrentPage} OF {totalPages}
+                </span>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {/* First Page */}
+                <button
+                  type="button"
+                  disabled={safeCurrentPage === 1}
+                  onClick={() => handlePageChange(1)}
+                  className="px-2.5 py-1.5 bg-[#FAF9F5] border border-black text-black hover:bg-black hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-colors font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+
+                {/* Previous Page */}
+                <button
+                  type="button"
+                  disabled={safeCurrentPage === 1}
+                  onClick={() => handlePageChange(safeCurrentPage - 1)}
+                  className="px-3 py-1.5 bg-[#FAF9F5] border border-black text-black hover:bg-black hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-colors font-bold flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">PREV</span>
+                </button>
+
+                {/* Page Number Buttons */}
+                {getPageNumbers().map((page, i) =>
+                  page === "..." ? (
+                    <span key={`dots-${i}`} className="px-2 py-1 text-[#777777] font-bold">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => handlePageChange(Number(page))}
+                      className={`min-w-[34px] px-2.5 py-1.5 border border-black font-bold text-xs transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                        safeCurrentPage === page
+                          ? "bg-[#E11D48] text-white hover:bg-black"
+                          : "bg-white text-black hover:bg-black hover:text-white"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+
+                {/* Next Page */}
+                <button
+                  type="button"
+                  disabled={safeCurrentPage === totalPages}
+                  onClick={() => handlePageChange(safeCurrentPage + 1)}
+                  className="px-3 py-1.5 bg-[#FAF9F5] border border-black text-black hover:bg-black hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-colors font-bold flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  <span className="hidden sm:inline">NEXT</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* Last Page */}
+                <button
+                  type="button"
+                  disabled={safeCurrentPage === totalPages}
+                  onClick={() => handlePageChange(totalPages)}
+                  className="px-2.5 py-1.5 bg-[#FAF9F5] border border-black text-black hover:bg-black hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-colors font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="p-16 text-center border-b border-black font-mono-code space-y-4 bg-white">
           <div className="text-4xl">∅</div>
