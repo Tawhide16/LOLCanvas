@@ -50,6 +50,8 @@ export interface EditorState {
     angle?: number;
     scaleX?: number;
     scaleY?: number;
+    flipX?: boolean;
+    flipY?: boolean;
   } | null;
 
   // Layers list metadata

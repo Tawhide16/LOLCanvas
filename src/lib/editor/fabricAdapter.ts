@@ -95,6 +95,14 @@ export class FabricAdapter {
       this.saveHistoryState();
     });
 
+    this.canvas.on("object:rotating", () => {
+      this.syncActiveObjectProps();
+    });
+
+    this.canvas.on("object:scaling", () => {
+      this.syncActiveObjectProps();
+    });
+
     this.canvas.on("text:changed", () => {
       this.syncActiveObjectProps();
       this.syncLayersToStore();
@@ -147,16 +155,20 @@ export class FabricAdapter {
         lineHeight: tb.lineHeight || 1.16,
         charSpacing: tb.charSpacing || 0,
         opacity: tb.opacity ?? 1,
-        angle: tb.angle || 0,
+        angle: Math.round(tb.angle || 0),
         scaleX: tb.scaleX || 1,
         scaleY: tb.scaleY || 1,
+        flipX: !!tb.flipX,
+        flipY: !!tb.flipY,
       });
     } else {
       useEditorStore.getState().setActiveObjectProps({
         opacity: active.opacity ?? 1,
-        angle: active.angle || 0,
+        angle: Math.round(active.angle || 0),
         scaleX: active.scaleX || 1,
         scaleY: active.scaleY || 1,
+        flipX: !!active.flipX,
+        flipY: !!active.flipY,
       });
     }
   }
@@ -338,40 +350,142 @@ export class FabricAdapter {
     const active = this.canvas.getActiveObject();
     if (!active) return;
 
+    const props = { ...properties };
+
     // Handle font family loading
-    if (properties.fontFamily) {
-      loadGoogleFont(properties.fontFamily, () => {
+    if (props.fontFamily) {
+      loadGoogleFont(props.fontFamily, () => {
         if (!this.canvas) return;
-        active.set({ fontFamily: properties.fontFamily });
+        active.set({ fontFamily: props.fontFamily });
         active.setCoords();
         this.canvas.requestRenderAll();
         this.saveHistoryState();
       });
+      delete props.fontFamily;
     }
 
     // Handle Shadow
-    if (properties.shadowColor !== undefined) {
-      if (properties.shadowColor === "" || properties.shadowColor === "transparent") {
+    if (props.shadowColor !== undefined) {
+      if (props.shadowColor === "" || props.shadowColor === "transparent") {
         active.set({ shadow: null });
       } else {
         const shadow = new fabric.Shadow({
-          color: properties.shadowColor,
-          blur: properties.shadowBlur !== undefined ? properties.shadowBlur : 8,
-          offsetX: properties.shadowOffsetX !== undefined ? properties.shadowOffsetX : 3,
-          offsetY: properties.shadowOffsetY !== undefined ? properties.shadowOffsetY : 3,
+          color: props.shadowColor,
+          blur: props.shadowBlur !== undefined ? props.shadowBlur : 8,
+          offsetX: props.shadowOffsetX !== undefined ? props.shadowOffsetX : 3,
+          offsetY: props.shadowOffsetY !== undefined ? props.shadowOffsetY : 3,
         });
         active.set({ shadow });
       }
-      delete properties.shadowColor;
-      delete properties.shadowBlur;
-      delete properties.shadowOffsetX;
-      delete properties.shadowOffsetY;
+      delete props.shadowColor;
+      delete props.shadowBlur;
+      delete props.shadowOffsetX;
+      delete props.shadowOffsetY;
     }
 
-    active.set(properties as any);
+    // Map rotation to Fabric's angle
+    if (props.rotation !== undefined) {
+      props.angle = props.rotation;
+      delete props.rotation;
+    }
+
+    // Map scale to Fabric's scaleX and scaleY
+    if (props.scale !== undefined) {
+      props.scaleX = props.scale;
+      props.scaleY = props.scale;
+      delete props.scale;
+    }
+
+    // Ensure origin is centered for in-place rotate/flip
+    if (props.angle !== undefined || props.flipX !== undefined || props.flipY !== undefined) {
+      if (active.originX !== "center" || active.originY !== "center") {
+        const center = active.getCenterPoint();
+        active.set({
+          originX: "center",
+          originY: "center",
+          left: center.x,
+          top: center.y,
+        });
+      }
+    }
+
+    active.set(props as any);
     active.setCoords();
     this.canvas.requestRenderAll();
 
+    this.syncActiveObjectProps();
+    this.saveHistoryState();
+  }
+
+  public rotateSelected(deltaDegrees: number) {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+
+    if (active.originX !== "center" || active.originY !== "center") {
+      const center = active.getCenterPoint();
+      active.set({
+        originX: "center",
+        originY: "center",
+        left: center.x,
+        top: center.y,
+      });
+    }
+
+    const currentAngle = active.angle || 0;
+    const newAngle = Math.round((currentAngle + deltaDegrees) % 360);
+    active.set("angle", newAngle);
+    active.setCoords();
+    this.canvas.requestRenderAll();
+    this.syncActiveObjectProps();
+    this.saveHistoryState();
+  }
+
+  public setAngleSelected(angle: number) {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+
+    if (active.originX !== "center" || active.originY !== "center") {
+      const center = active.getCenterPoint();
+      active.set({
+        originX: "center",
+        originY: "center",
+        left: center.x,
+        top: center.y,
+      });
+    }
+
+    active.set("angle", angle);
+    active.setCoords();
+    this.canvas.requestRenderAll();
+    this.syncActiveObjectProps();
+    this.saveHistoryState();
+  }
+
+  public toggleFlipSelected(axis: "X" | "Y") {
+    if (!this.canvas) return;
+    const active = this.canvas.getActiveObject();
+    if (!active) return;
+
+    if (active.originX !== "center" || active.originY !== "center") {
+      const center = active.getCenterPoint();
+      active.set({
+        originX: "center",
+        originY: "center",
+        left: center.x,
+        top: center.y,
+      });
+    }
+
+    if (axis === "X") {
+      active.set("flipX", !active.flipX);
+    } else {
+      active.set("flipY", !active.flipY);
+    }
+
+    active.setCoords();
+    this.canvas.requestRenderAll();
     this.syncActiveObjectProps();
     this.saveHistoryState();
   }

@@ -889,6 +889,8 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
         rotation: activeObjectProps?.angle ?? 0,
         opacity: activeObjectProps?.opacity ?? 1,
         scale: activeObjectProps?.scaleX ?? 1,
+        flipX: activeObjectProps?.flipX ?? false,
+        flipY: activeObjectProps?.flipY ?? false,
         text: activeObjectProps?.text ?? activeStoreLayer.name,
         fontFamily: activeObjectProps?.fontFamily,
         fontSize: activeObjectProps?.fontSize,

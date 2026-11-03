@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { fabricAdapter } from "@/lib/editor/fabricAdapter";
+import { useEditorStore } from "@/lib/editor/editorStore";
 import { applyImageFilters, removeColorBackground } from "@/lib/editor/imageFilters";
 import * as fabric from "fabric";
 
@@ -67,11 +68,12 @@ export default function ImageControls({
     return null;
   }
 
-  const rotation = selectedLayer.rotation || 0;
-  const scale = selectedLayer.scale || 1;
-  const opacity = selectedLayer.opacity !== undefined ? selectedLayer.opacity : 1;
-  const flipX = selectedLayer.flipX || false;
-  const flipY = selectedLayer.flipY || false;
+  const activeObjectProps = useEditorStore((s) => s.activeObjectProps);
+  const rotation = activeObjectProps?.angle ?? selectedLayer.rotation ?? 0;
+  const scale = activeObjectProps?.scaleX ?? selectedLayer.scale ?? 1;
+  const opacity = activeObjectProps?.opacity ?? selectedLayer.opacity ?? 1;
+  const flipX = activeObjectProps?.flipX ?? selectedLayer.flipX ?? false;
+  const flipY = activeObjectProps?.flipY ?? selectedLayer.flipY ?? false;
 
   const handleUpdate = (updates: Partial<CanvasLayer>) => {
     fabricAdapter.updateActiveObject(updates);
@@ -227,8 +229,8 @@ export default function ImageControls({
                 type="range"
                 min="-180"
                 max="180"
-                value={rotation}
-                onChange={(e) => handleUpdate({ rotation: parseInt(e.target.value, 10) })}
+                value={rotation > 180 ? rotation - 360 : rotation < -180 ? rotation + 360 : rotation}
+                onChange={(e) => fabricAdapter.setAngleSelected(parseInt(e.target.value, 10))}
                 className="w-full accent-black cursor-pointer"
               />
             </div>
@@ -241,8 +243,8 @@ export default function ImageControls({
               <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => handleUpdate({ rotation: (rotation - 90) % 360 })}
-                  className="py-1.5 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1 text-[10px] font-bold"
+                  onClick={() => fabricAdapter.rotateSelected(-90)}
+                  className="py-1.5 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1 text-[10px] font-bold active:scale-95"
                   title="Rotate Left 90°"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -250,8 +252,8 @@ export default function ImageControls({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleUpdate({ rotation: (rotation + 90) % 360 })}
-                  className="py-1.5 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1 text-[10px] font-bold"
+                  onClick={() => fabricAdapter.rotateSelected(90)}
+                  className="py-1.5 bg-[#FAF9F5] border border-black hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1 text-[10px] font-bold active:scale-95"
                   title="Rotate Right 90°"
                 >
                   <RotateCw className="w-3 h-3" />
@@ -259,9 +261,9 @@ export default function ImageControls({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleUpdate({ flipX: !flipX })}
-                  className={`py-1.5 border border-black transition-colors flex items-center justify-center gap-1 text-[10px] font-bold ${
-                    flipX ? "bg-black text-white" : "bg-[#FAF9F5] text-black hover:bg-black hover:text-white"
+                  onClick={() => fabricAdapter.toggleFlipSelected("X")}
+                  className={`py-1.5 border border-black transition-colors flex items-center justify-center gap-1 text-[10px] font-bold active:scale-95 ${
+                    flipX ? "bg-black text-white ring-2 ring-[#E11D48]" : "bg-[#FAF9F5] text-black hover:bg-black hover:text-white"
                   }`}
                   title="Flip Horizontal"
                 >
@@ -270,9 +272,9 @@ export default function ImageControls({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleUpdate({ flipY: !flipY })}
-                  className={`py-1.5 border border-black transition-colors flex items-center justify-center gap-1 text-[10px] font-bold ${
-                    flipY ? "bg-black text-white" : "bg-[#FAF9F5] text-black hover:bg-black hover:text-white"
+                  onClick={() => fabricAdapter.toggleFlipSelected("Y")}
+                  className={`py-1.5 border border-black transition-colors flex items-center justify-center gap-1 text-[10px] font-bold active:scale-95 ${
+                    flipY ? "bg-black text-white ring-2 ring-[#E11D48]" : "bg-[#FAF9F5] text-black hover:bg-black hover:text-white"
                   }`}
                   title="Flip Vertical"
                 >
