@@ -1,5 +1,7 @@
 import { fabricAdapter } from "./fabricAdapter";
-import { useEditorStore } from "./editorStore";
+import { useEditorStore, markCanvasDirty, getIsCanvasDirty, resetCanvasDirty } from "./editorStore";
+
+export { markCanvasDirty };
 
 const DB_NAME = "LOLCanvasDB";
 const STORE_NAME = "projects";
@@ -34,17 +36,12 @@ export interface ProjectData {
 }
 
 let lastSavedCanvasJson: string | null = null;
-let isCanvasDirty = false;
-
-export function markCanvasDirty(): void {
-  isCanvasDirty = true;
-}
 
 export async function autosaveProject(force = false): Promise<void> {
   try {
     if (!fabricAdapter.canvas) return;
     // Skip serialization entirely if nothing was modified
-    if (!force && !isCanvasDirty) {
+    if (!force && !getIsCanvasDirty()) {
       return;
     }
 
@@ -66,11 +63,11 @@ export async function autosaveProject(force = false): Promise<void> {
 
     // Skip expensive disk/IndexedDB writes if canvas state is unchanged
     if (!force && lastSavedCanvasJson === canvasJson) {
-      isCanvasDirty = false;
+      resetCanvasDirty();
       return;
     }
     lastSavedCanvasJson = canvasJson;
-    isCanvasDirty = false;
+    resetCanvasDirty();
 
     const { width, height, backgroundColor } = useEditorStore.getState();
 

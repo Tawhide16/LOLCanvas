@@ -203,3 +203,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setShowShortcutsModal: (show) => set({ showShortcutsModal: show }),
   setShowExportModal: (show) => set({ showExportModal: show }),
 }));
+
+// Canvas dirty state flag to break circular dependency between fabricAdapter & projectStorage
+let isCanvasDirtyFlag = false;
+
+export function markCanvasDirty(): void {
+  isCanvasDirtyFlag = true;
+}
+
+export function getIsCanvasDirty(): boolean {
+  return isCanvasDirtyFlag;
+}
+
+export function resetCanvasDirty(): void {
+  isCanvasDirtyFlag = false;
+}

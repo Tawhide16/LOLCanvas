@@ -70,36 +70,57 @@ export default function CanvasWorkspace({
     if (!isReady || !fabricAdapter.canvas) return;
 
     const targetUrl = backgroundImageUrl || template?.originalUrl || template?.svgDataUri;
+    const existing = fabricAdapter.canvas.getObjects().find((o: any) => o.isBaseTemplate);
+
     if (targetUrl && targetUrl !== "blank-canvas") {
-      const existing = fabricAdapter.canvas.getObjects().find((o: any) => o.isBaseTemplate);
-      if (!existing) {
-        fabric.FabricImage.fromURL(targetUrl, { crossOrigin: "anonymous" })
-          .then((img) => {
-            if (!fabricAdapter.canvas) return;
-            (img as any).id = "base_template_img";
-            (img as any).name = template?.title || "Base Template";
-            (img as any).isBaseTemplate = true;
+      if (existing && (existing as any).sourceUrl === targetUrl) {
+        return;
+      }
 
-            const scaleX = width / (img.width || 1);
-            const scaleY = height / (img.height || 1);
-            const scale = Math.min(scaleX, scaleY);
+      if (existing) {
+        fabricAdapter.canvas.remove(existing);
+      }
 
-            img.set({
-              left: width / 2,
-              top: height / 2,
-              originX: "center",
-              originY: "center",
-              scaleX: scale,
-              scaleY: scale,
-            });
+      const loadPromise = fabric.FabricImage.fromURL(targetUrl, { crossOrigin: "anonymous" })
+        .catch(() => fabric.FabricImage.fromURL(targetUrl));
 
-            fabricAdapter.canvas.add(img);
-            fabricAdapter.canvas.sendObjectToBack(img);
-            fabricAdapter.canvas.requestRenderAll();
-            fabricAdapter.syncLayersToStore();
-            fabricAdapter.saveHistoryState();
-          })
-          .catch((err) => console.error("Could not load template image into canvas:", err));
+      loadPromise
+        .then((img) => {
+          if (!fabricAdapter.canvas) return;
+          (img as any).id = "base_template_img";
+          (img as any).name = template?.title || "Base Template";
+          (img as any).isBaseTemplate = true;
+          (img as any).sourceUrl = targetUrl;
+          (img as any).previewUrl = targetUrl;
+
+          const scaleX = width / (img.width || 1);
+          const scaleY = height / (img.height || 1);
+          const scale = Math.min(scaleX, scaleY);
+
+          img.set({
+            left: width / 2,
+            top: height / 2,
+            originX: "center",
+            originY: "center",
+            scaleX: scale,
+            scaleY: scale,
+            selectable: true,
+            evented: true,
+          });
+
+          fabricAdapter.canvas.add(img);
+          fabricAdapter.canvas.sendObjectToBack(img);
+          fabricAdapter.canvas.requestRenderAll();
+          fabricAdapter.syncLayersToStore();
+          fabricAdapter.saveHistoryState();
+        })
+        .catch((err) => console.error("Could not load template image into canvas:", err));
+    } else if (targetUrl === "blank-canvas" || !targetUrl) {
+      if (existing) {
+        fabricAdapter.canvas.remove(existing);
+        fabricAdapter.canvas.requestRenderAll();
+        fabricAdapter.syncLayersToStore();
+        fabricAdapter.saveHistoryState();
       }
     }
   }, [template, backgroundImageUrl, isReady, width, height]);

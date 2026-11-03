@@ -511,26 +511,31 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
 
   const handleSelectMemeTemplate = (template: Template) => {
     setCurrentTemplate(template);
-    setCustomBgImage(template.svgDataUri || template.originalUrl || null);
+    const bgUrl = template.svgDataUri || template.originalUrl || null;
+    setCustomBgImage(bgUrl);
     setCanvasWidth(template.width);
     setCanvasHeight(template.height);
     setActivePresetName(template.title);
+    useEditorStore.getState().setCanvasSize(template.width, template.height, template.title);
     const newLayers = getInitialLayers(template);
     setLayers(newLayers);
     setSelectedLayerId(newLayers[0]?.id || null);
     pushHistory(newLayers);
+    setHasUnsavedChanges(true);
   };
 
   const handleBlankMemeCanvas = () => {
     setCurrentTemplate(null);
-    setCustomBgImage(null);
+    setCustomBgImage("blank-canvas");
     setCanvasWidth(1080);
     setCanvasHeight(1080);
     setActivePresetName("BLANK MEME CANVAS");
+    useEditorStore.getState().setCanvasSize(1080, 1080, "BLANK MEME CANVAS");
     const newLayers = getInitialLayers(null);
     setLayers(newLayers);
     setSelectedLayerId(newLayers[0]?.id || null);
     pushHistory(newLayers);
+    setHasUnsavedChanges(true);
   };
 
   // Custom Size Creation
@@ -609,6 +614,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
     width = 240,
     height = 180
   ) => {
+    fabricAdapter.addImageLayer(imageUrl, name, false);
     const newId = `img-layer-${Date.now()}`;
     const maxZ = layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
     const newLayer: CanvasLayer = {
@@ -634,7 +640,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
     const updated = [...layers, newLayer];
     setLayers(updated);
     setSelectedLayerId(newId);
-    pushHistory(updated);
+    setHasUnsavedChanges(true);
   };
 
   const handleAddTextLayer = (initialText = "NEW CAPTION", yPos = 50) => {
@@ -681,9 +687,18 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   };
 
   // Zoom controls
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, +(z + 0.15).toFixed(2)));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.4, +(z - 0.15).toFixed(2)));
-  const handleZoomReset = () => setZoomLevel(1);
+  const handleZoomIn = () => {
+    setStoreZoom((z) => Math.min(2.5, +(z + 0.15).toFixed(2)));
+    setZoomLevel((z) => Math.min(2.5, +(z + 0.15).toFixed(2)));
+  };
+  const handleZoomOut = () => {
+    setStoreZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)));
+    setZoomLevel((z) => Math.max(0.3, +(z - 0.15).toFixed(2)));
+  };
+  const handleZoomReset = () => {
+    setStoreZoom(1);
+    setZoomLevel(1);
+  };
 
   // Export actions
   const handleExportPNG = async () => {
@@ -841,6 +856,10 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
   };
 
   // Exit Editor
+  useEffect(() => {
+    useEditorStore.getState().setCanvasSize(canvasWidth, canvasHeight);
+  }, [canvasWidth, canvasHeight]);
+
   const handleExitClick = () => {
     if (hasUnsavedChanges) {
       setShowExitConfirmModal(true);
@@ -854,7 +873,31 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
     router.push("/");
   };
 
-  const selectedLayer = layers.find((l) => l.id === selectedLayerId) || null;
+  const storeLayers = useEditorStore((s) => s.layers);
+  const storeSelectedLayerIds = useEditorStore((s) => s.selectedLayerIds);
+  const activeObjectProps = useEditorStore((s) => s.activeObjectProps);
+  const activeStoreLayer = storeLayers.find((l) => storeSelectedLayerIds.includes(l.id)) || null;
+
+  const selectedLayer: CanvasLayer | null = activeStoreLayer
+    ? {
+        id: activeStoreLayer.id,
+        type: activeStoreLayer.type === "image" || activeStoreLayer.type === "sticker" ? "image" : "text",
+        imageName: activeStoreLayer.name,
+        imageUrl: activeStoreLayer.previewUrl,
+        x: 0,
+        y: 0,
+        rotation: activeObjectProps?.angle ?? 0,
+        opacity: activeObjectProps?.opacity ?? 1,
+        scale: activeObjectProps?.scaleX ?? 1,
+        text: activeObjectProps?.text ?? activeStoreLayer.name,
+        fontFamily: activeObjectProps?.fontFamily,
+        fontSize: activeObjectProps?.fontSize,
+        color: activeObjectProps?.fill,
+        strokeColor: activeObjectProps?.stroke,
+        strokeWidth: activeObjectProps?.strokeWidth,
+        zIndex: activeStoreLayer.zIndex,
+      }
+    : (layers.find((l) => l.id === selectedLayerId) || null);
 
   return (
     <div className="fixed inset-0 z-[100] w-screen h-screen overflow-hidden bg-[#FAF9F5] flex flex-col text-black font-body select-none">
@@ -1455,30 +1498,46 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
                         type="text"
                         value={baseMemeSearch}
                         onChange={(e) => setBaseMemeSearch(e.target.value)}
-                        placeholder="SEARCH UPLOADED MEMES..."
+                        placeholder="SEARCH MEME TEMPLATES..."
                         className="w-full pl-6 pr-2 py-1.5 bg-white border border-black text-[10px] font-bold uppercase focus:outline-none"
                       />
                       <Search className="w-3 h-3 text-[#777777] absolute left-2 top-2" />
                     </div>
 
-                    <div className="border border-black bg-white text-[9px] font-bold uppercase">
+                    <div className="grid grid-cols-2 border border-black bg-white text-[9px] font-bold uppercase">
                       <button
                         type="button"
                         onClick={() => setBaseMemeTab("uploaded")}
-                        className="w-full py-1 px-2 text-center transition-colors bg-black text-white"
+                        className={`py-1 px-2 text-center transition-colors ${
+                          baseMemeTab === "uploaded"
+                            ? "bg-black text-white"
+                            : "hover:bg-black/10 text-black"
+                        }`}
                       >
-                        COMMUNITY TEMPLATES ({allUploadedMemes.length})
+                        COMMUNITY ({allUploadedMemes.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBaseMemeTab("classic")}
+                        className={`py-1 px-2 text-center transition-colors border-l border-black ${
+                          baseMemeTab === "classic"
+                            ? "bg-black text-white"
+                            : "hover:bg-black/10 text-black"
+                        }`}
+                      >
+                        CLASSIC ({TEMPLATES.length})
                       </button>
                     </div>
                   </div>
 
                   {/* Grid of Base Memes */}
-                  <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-0.5">
-                    {allUploadedMemes
+                  <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-0.5">
+                    {(baseMemeTab === "uploaded" ? allUploadedMemes : TEMPLATES)
                       .filter(
                         (t) =>
                           !baseMemeSearch ||
-                          t.title.toLowerCase().includes(baseMemeSearch.toLowerCase())
+                          t.title.toLowerCase().includes(baseMemeSearch.toLowerCase()) ||
+                          (t.categoryName && t.categoryName.toLowerCase().includes(baseMemeSearch.toLowerCase()))
                       )
                       .map((tpl) => (
                         <button
@@ -1493,7 +1552,7 @@ export default function EditorClient({ templateSlug = "blank-canvas" }: EditorCl
                         >
                           <div className="aspect-[4/3] bg-[#FAF9F5] border border-black/15 p-1 mb-1.5 flex items-center justify-center overflow-hidden">
                             <img
-                              src={tpl.svgDataUri}
+                              src={tpl.svgDataUri || tpl.originalUrl || ""}
                               alt={tpl.title}
                               className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
                             />

@@ -1,8 +1,7 @@
 import * as fabric from "fabric";
 import { SnappingManager } from "./snappingGuides";
-import { useEditorStore } from "./editorStore";
+import { useEditorStore, markCanvasDirty } from "./editorStore";
 import { loadGoogleFont, ensureFontsReady } from "@/lib/googleFonts";
-import { markCanvasDirty } from "./projectStorage";
 
 // Neo-brutalist styling for transformer controls
 export function applyNeoBrutalistControls(obj: fabric.FabricObject) {
@@ -289,8 +288,14 @@ export class FabricAdapter {
     const canvasHeight = this.canvas.height || 1080;
 
     try {
-      const img = await fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
-      const maxDim = isSticker ? Math.min(canvasWidth, canvasHeight) * 0.35 : Math.min(canvasWidth, canvasHeight) * 0.65;
+      let img: fabric.FabricImage;
+      try {
+        img = await fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
+      } catch {
+        img = await fabric.FabricImage.fromURL(url);
+      }
+
+      const maxDim = isSticker ? Math.min(canvasWidth, canvasHeight) * 0.35 : Math.min(canvasWidth, canvasHeight) * 0.55;
       const currentMax = Math.max(img.width || 1, img.height || 1);
       const scale = maxDim / currentMax;
 
@@ -307,13 +312,18 @@ export class FabricAdapter {
         originY: "center",
         scaleX: scale,
         scaleY: scale,
+        selectable: true,
+        evented: true,
       });
 
       applyNeoBrutalistControls(img);
+      img.setCoords();
       this.canvas.add(img);
+      this.canvas.bringObjectToFront(img);
       this.canvas.setActiveObject(img);
       this.canvas.requestRenderAll();
 
+      this.updateSelectionState();
       this.syncLayersToStore();
       this.saveHistoryState();
     } catch (e) {
